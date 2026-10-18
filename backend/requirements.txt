@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+falkordb
+pydantic
+python-dotenv
+groq
+mcp<2

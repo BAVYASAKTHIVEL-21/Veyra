@@ -1,0 +1,12 @@
+.git
+.env
+.venv
+venv
+**/__pycache__
+**/*.pyc
+**/node_modules
+frontend/dist
+backups/
+*.rdb
+*-dump.json
+veyra-before-*.json

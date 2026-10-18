@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Environment secrets
+.env
+.env.*
+
+# Generated database dumps and backups
+backups/*.rdb
+data/*.bak
+data/*.tmp
+
+veyra-dump-backup.rdb
+veyra-recovery-dump.rdb
+*.rdb
+
+frontend/node_modules/
+frontend/dist/
+*.bak
+*.backup*
+*.before-*
+*.pyc
+backups/*.tar.gz
+veyra-before-cleanup-20261018-062943.json
+
+# Local VEYRA recovery artifacts
+veyra-before-cleanup-*.json
+backups/*.tar.gz
+backups/
+veyra-before-*.json
+
+# Local secrets
+.env
+.env.*
+!.env.example
+.envwq
