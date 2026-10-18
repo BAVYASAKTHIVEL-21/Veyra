@@ -126,9 +126,7 @@ async def ask_veyra(
 
 
     server_params = StdioServerParameters(
-        command=str(
-            PROJECT_ROOT / "backend" / ".venv" / "bin" / "python"
-        ),
+        command=os.getenv("VEYRA_MCP_PYTHON", "/usr/local/bin/python"),
         args=[str(PROJECT_ROOT / "backend" / "mcp_server.py")],
         env={
             **os.environ,

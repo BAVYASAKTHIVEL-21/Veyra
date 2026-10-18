@@ -714,10 +714,10 @@ body.veyra-investigation-open .diagonal-sweep-2 {
 
             <!-- 5 Internal Tabs Navigation -->
             <div class="flex items-center space-x-2 border-b border-white/10 pb-3 shrink-0 overflow-x-auto">
-                <button onclick="switchCaseTab('overview')" id="ctab-overview" class="px-4 py-2 rounded-xl text-xs font-bold text-[#FFCC00] bg-[#FFCC00]/10 border border-[#FFCC00]/30 transition-all cursor-pointer">Overview</button>
+                
                 <button onclick="switchCaseTab('graph')" id="ctab-graph" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Evidence Graph</button>
                 <button onclick="switchCaseTab('timeline')" id="ctab-timeline" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Timeline</button>
-                <button onclick="switchCaseTab('remediation')" id="ctab-remediation" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Remediation</button>
+                
                 <button onclick="switchCaseTab('agent')" id="ctab-agent" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Ask Agent 💬</button>
             </div>
 
@@ -800,18 +800,24 @@ body.veyra-investigation-open .diagonal-sweep-2 {
 
             <!-- TAB 5: ASK AGENT -->
             <div id="ctab-content-agent" class="case-tab-content hidden flex flex-col gap-4 flex-1 h-[520px]">
-                <div class="bg-cardbg border border-white/10 rounded-2xl p-6 flex flex-col flex-1 shadow-2xl">
-                    <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3 shrink-0">
-                        <div>
-                            <h3 class="text-white font-bold text-sm">Ask Veyra Agent About This Case</h3>
-                            <p class="text-[10px] text-slate-400 mt-0.5">Conversational memory is fully isolated to this case ID. Grounded strictly in FalkorDB evidence.</p>
+                <div class="flex flex-col flex-1 min-h-0 overflow-hidden rounded-2xl border border-white/10 bg-[#0c0d11] shadow-2xl">
+                    <div class="flex items-center justify-between gap-3 border-b border-white/10 bg-white/[0.025] px-5 py-4 shrink-0">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#FFCC00]/30 bg-[#FFCC00]/10 text-[#FFCC00] text-lg">✦</div>
+                            <div class="min-w-0">
+                                <h3 class="text-white font-bold text-sm">Veyra Assistant</h3>
+                                <p class="text-[11px] text-slate-400 mt-1">Ask about this investigation's saved evidence and findings.</p>
+                            </div>
                         </div>
-                        <span id="agent-case-id-tag" class="text-[9px] mono text-[#FFCC00] font-bold">CASE-ID</span>
+                        <span id="agent-case-id-tag" title="Current case ID" class="max-w-[180px] truncate rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[9px] mono text-slate-400">CASE-ID</span>
                     </div>
-                    <div id="case-agent-messages" class="flex-1 overflow-y-auto space-y-3 text-xs p-4 bg-obsidian rounded-xl border border-white/10"></div>
-                    <div class="mt-4 flex items-center space-x-2 pt-2 border-t border-white/10 shrink-0">
-                        <input type="text" id="case-agent-input" placeholder="Ask a question about this case (e.g. Why was this high risk?)..." class="flex-1 bg-classifiedGray border border-white/20 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#FFCC00]">
-                        <button onclick="sendCaseAgentMessage()" class="px-5 py-2.5 rounded-xl bg-[#FFCC00] text-black font-extrabold text-xs cursor-pointer hover:bg-[#e6b800] transition-all">Send</button>
+                    <div id="case-agent-messages" aria-live="polite" class="flex-1 min-h-[260px] overflow-y-auto space-y-5 px-4 py-5 sm:px-6 bg-[radial-gradient(ellipse_at_top,rgba(255,204,0,0.045),transparent_55%)]"></div>
+                    <div class="border-t border-white/10 bg-white/[0.02] p-3 sm:p-4 shrink-0">
+                        <div class="flex items-end gap-2 rounded-2xl border border-white/10 bg-[#15161c] p-2 transition-colors focus-within:border-[#FFCC00]/50">
+                            <input type="text" id="case-agent-input" autocomplete="off" aria-label="Ask Veyra about this case" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCaseAgentMessage()}" placeholder="Ask why this case was flagged, or explore its evidence..." class="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none">
+                            <button id="case-agent-send" onclick="sendCaseAgentMessage()" class="flex shrink-0 items-center gap-2 rounded-xl bg-[#FFCC00] px-4 py-3 text-xs font-extrabold text-black transition-all hover:bg-yellow-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"><span>Send</span><span aria-hidden="true">↑</span></button>
+                        </div>
+                        <p class="px-2 pt-2 text-[10px] text-slate-500">Responses are grounded in the available case context. Verify important findings against the evidence.</p>
                     </div>
                 </div>
             </div>
@@ -1217,17 +1223,31 @@ function sendAgentChatMessage() {
             }
 
             try {
-                const response = await fetch('/api/accounts?limit=500&offset=500', {
-                    cache: 'no-store'
-                });
-                if (!response.ok) {
-                    throw new Error(`Account API returned HTTP ${response.status}`);
+                const pageSize = 500;
+                let accounts = [];
+                let offset = 0;
+                let total = Infinity;
+
+                while (offset < total) {
+                    const response = await fetch(
+                        `/api/accounts?limit=${pageSize}&offset=${offset}`,
+                        { cache: 'no-store' }
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`Account API returned HTTP ${response.status}`);
+                    }
+
+                    const payload = await response.json();
+                    const page = Array.isArray(payload.accounts) ? payload.accounts : [];
+                    accounts.push(...page);
+
+                    total = Number(payload.total ?? accounts.length);
+                    if (page.length === 0) break;
+                    offset += page.length;
                 }
 
-                const payload = await response.json();
-                const accounts = Array.isArray(payload.accounts)
-                    ? payload.accounts.filter(a => a && a.id && a.username)
-                    : [];
+                accounts = accounts.filter(a => a && a.id && a.username);
 
                 if (!accounts.length) {
                     throw new Error("FalkorDB returned no usable accounts.");
@@ -2160,22 +2180,44 @@ window.executeVeyraInvestigationOnSelected = function () {
         async function loadCasesList() {
             const tbody = document.getElementById('cases-table-body');
             const badge = document.getElementById('backend-status-badge');
+
+            if (!tbody) {
+                console.error("VEYRA: cases-table-body element not found");
+                return;
+            }
+
             tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Querying FalkorDB cases archive...</td></tr>`;
-            
+
             try {
-                const res = await fetch(getApiUrl('/api/cases'));
-                if (!res.ok) throw new Error("Backend offline");
+                const res = await fetch(getApiUrl('/api/cases'), {
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) {
+                    throw new Error(`Cases API returned HTTP ${res.status}`);
+                }
+
                 const data = await res.json();
-                allCasesCache = Array.isArray(data) ? data : (data.cases || []);
-                badge.textContent = "FALKORDB: ONLINE";
-                badge.className = "text-[8px] mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 font-bold";
+                allCasesCache = Array.isArray(data)
+                    ? data
+                    : (Array.isArray(data.cases) ? data.cases : []);
+
+                if (badge) {
+                    badge.textContent = "FALKORDB: ONLINE";
+                    badge.className = "text-[8px] mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 font-bold";
+                }
+
                 renderCasesTable(allCasesCache);
             } catch (e) {
-                console.warn("Backend unavailable", e);
-                badge.textContent = "FALKORDB: DEGRADED";
-                badge.className = "text-[8px] mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/30 font-bold";
+                console.warn("VEYRA cases archive unavailable:", e);
+
+                if (badge) {
+                    badge.textContent = "FALKORDB: DEGRADED";
+                    badge.className = "text-[8px] mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/30 font-bold";
+                }
+
                 allCasesCache = [];
-                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">No cases found in FalkorDB archive. Start an investigation to populate records.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Could not load cases. Check the backend connection and retry.</td></tr>`;
             }
         }
 
@@ -2188,16 +2230,32 @@ window.executeVeyraInvestigationOnSelected = function () {
             tbody.innerHTML = '';
             list.forEach(c => {
                 const caseId = c.id || c.investigation_id;
-                const risk = (c.classification || c.risk || 'UNKNOWN').toUpperCase();
-                const status = (c.status || 'UNKNOWN').toUpperCase();
+                const risk = String(
+                    c.classification || c.risk_level || c.agent_risk_level || c.risk || 'UNKNOWN'
+                ).replaceAll('-', '_').toUpperCase();
+                const status = String(c.status || 'UNKNOWN').replaceAll('-', '_').toUpperCase();
+                const riskClass = risk === 'HIGH'
+                    ? 'bg-red-500/20 text-red-400'
+                    : risk === 'MEDIUM'
+                        ? 'bg-yellow-500/20 text-yellow-400'
+                        : risk === 'LOW' || risk === 'SAFE'
+                            ? 'bg-emerald-500/20 text-emerald-400'
+                            : 'bg-slate-500/20 text-slate-300';
+                const statusClass = status === 'COMPLETED'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : status === 'NEEDS_REVIEW'
+                        ? 'bg-amber-500/20 text-amber-400'
+                        : status === 'INVESTIGATION_FAILED' || status === 'FAILED'
+                            ? 'bg-red-500/20 text-red-400'
+                            : 'bg-slate-500/20 text-slate-300';
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-white/5 cursor-pointer transition-colors";
                 tr.onclick = () => openCaseDetails(caseId);
                 tr.innerHTML = `
                     <td class="py-3.5 px-3 mono text-[#FFCC00] font-bold">${caseId}</td>
                     <td class="py-3.5 px-3 truncate max-w-xs font-semibold">${escapeHtml(c.message || c.sender || 'Investigation Case')}</td>
-                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${risk === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}">${risk}</span></td>
-                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">${status}</span></td>
+                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${riskClass}">${risk}</span></td>
+                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}">${status}</span></td>
                     <td class="py-3.5 px-3 mono text-[10px] text-slate-400">${c.created_at || c.created || 'Date unavailable'}</td>
                     <td class="py-3.5 px-3 text-right text-[#FFCC00] font-bold">View Case →</td>
                 `;
@@ -2213,7 +2271,7 @@ window.executeVeyraInvestigationOnSelected = function () {
             const filtered = allCasesCache.filter(c => {
                 const matchQ = ( (c.id || '') + ' ' + (c.sender || '') + ' ' + (c.message || '') ).toLowerCase().includes(q);
                 const matchStatus = statusFilter === 'ALL' || (c.status || 'UNKNOWN').toUpperCase() === statusFilter;
-                const matchRisk = riskFilter === 'ALL' || (c.classification || c.risk || 'UNKNOWN').toUpperCase() === riskFilter;
+                const matchRisk = riskFilter === 'ALL' || String(c.classification || c.risk_level || c.agent_risk_level || c.risk || 'UNKNOWN').replaceAll('-', '_').toUpperCase() === riskFilter;
                 return matchQ && matchStatus && matchRisk;
             });
             renderCasesTable(filtered);
@@ -2261,9 +2319,10 @@ window.executeVeyraInvestigationOnSelected = function () {
                     })),
                     edges: (snapshot.edges || []).map(e => ({
                         ...e,
-                        source: e.source || e.from,
-                        target: e.target || e.to,
-                    })),
+                        source: String(e.source ?? e.from ?? e.start ?? ''),
+                        target: String(e.target ?? e.to ?? e.end ?? ''),
+                        type: e.type || e.label || e.relationship || 'CONNECTED_TO',
+                    })).filter(e => e.source && e.target),
                 };
             }
 
@@ -2313,21 +2372,151 @@ window.executeVeyraInvestigationOnSelected = function () {
                     String(a.timestamp || "").localeCompare(String(b.timestamp || ""))
                 )
                 : [];
+
+            const caseStatus = String(activeCase.status || '').toLowerCase();
+            const isFailed = caseStatus.includes('fail') || Boolean(activeCase.error);
+            const isCompleted = ['completed', 'complete', 'success', 'succeeded'].includes(caseStatus);
+            const header = document.createElement('div');
+            header.className = 'mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.025] p-4';
+
+            const intro = document.createElement('div');
+            const introTitle = document.createElement('h4');
+            introTitle.className = 'text-sm font-bold text-white';
+            introTitle.textContent = 'Investigation execution';
+            const introSub = document.createElement('p');
+            introSub.className = 'mt-1 text-xs text-slate-400';
+            introSub.textContent = `${events.length} recorded event${events.length === 1 ? '' : 's'} · ordered by event time`;
+            intro.append(introTitle, introSub);
+
+            const overall = document.createElement('span');
+            overall.className = 'rounded-full border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider ' +
+                (isFailed
+                    ? 'border-red-500/30 bg-red-500/10 text-red-300'
+                    : isCompleted
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                        : 'border-amber-500/30 bg-amber-500/10 text-amber-300');
+            overall.textContent = isFailed ? 'Investigation failed' : isCompleted ? 'Completed' : 'Review / in progress';
+            header.append(intro, overall);
+            tlDiv.appendChild(header);
+
             if (events.length === 0) {
-                tlDiv.textContent = 'No saved progress events for this case.';
+                const empty = document.createElement('div');
+                empty.className = 'rounded-2xl border border-dashed border-white/10 bg-white/[0.02] px-5 py-10 text-center';
+                empty.innerHTML = '<div class="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-white/5 text-slate-400">◷</div><p class="text-sm font-semibold text-slate-200">No timeline events saved</p><p class="mt-1 text-xs text-slate-500">Recorded investigation events will appear here when available.</p>';
+                tlDiv.appendChild(empty);
             } else {
-                events.forEach(event => {
-                    const item = document.createElement('div');
-                    item.className = 'p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center';
-                    const label = document.createElement('span');
-                    label.className = 'text-xs font-semibold';
-                    label.textContent = event.message || event.stage || event.name || event.event || JSON.stringify(event);
-                    const status = document.createElement('span');
-                    status.className = 'text-slate-400 font-mono text-[10px] font-bold';
-                    status.textContent = event.status || event.timestamp || '';
-                    item.append(label, status);
-                    tlDiv.appendChild(item);
+                const list = document.createElement('div');
+                list.className = 'relative ml-2 space-y-0';
+
+                events.forEach((event, index) => {
+                    const rawMessage = String(event.message || event.stage || event.name || event.event || 'Investigation event');
+                    const message = rawMessage.replace(/\s+/g, ' ').trim();
+                    const lower = `${message} ${event.status || ''}`.toLowerCase();
+                    const failed = lower.includes('fail') || lower.includes('error');
+                    const success = lower.includes('complete') || lower.includes('returned') || lower.includes('success');
+                    const isHop = /hop\s*\d+/i.test(message);
+                    const match = message.match(/hop\s*(\d+)\s*:\s*(\d+)\s*nodes?,\s*(\d+)\s*(?:unique\s*)?relationships?/i);
+                    const timeRaw = event.timestamp || event.created_at || '';
+                    let timeLabel = 'Time not recorded';
+
+                    if (timeRaw) {
+                        const parsed = new Date(timeRaw);
+                        timeLabel = Number.isNaN(parsed.getTime())
+                            ? String(timeRaw)
+                            : parsed.toLocaleString([], {
+                                year: 'numeric', month: 'short', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit', second: '2-digit'
+                            });
+                    }
+
+                    const row = document.createElement('div');
+                    row.className = 'relative grid grid-cols-[30px_minmax(0,1fr)] gap-3 pb-5';
+
+                    const rail = document.createElement('div');
+                    rail.className = 'relative flex justify-center';
+
+                    if (index < events.length - 1) {
+                        const line = document.createElement('span');
+                        line.className = 'absolute top-8 bottom-0 w-px bg-gradient-to-b from-white/20 to-white/5';
+                        rail.appendChild(line);
+                    }
+
+                    const marker = document.createElement('span');
+                    marker.className = 'relative z-10 flex h-7 w-7 items-center justify-center rounded-full border text-[10px] font-bold ' +
+                        (failed
+                            ? 'border-red-500/40 bg-red-500/10 text-red-300'
+                            : success
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300'
+                                : 'border-[#FFCC00]/35 bg-[#FFCC00]/10 text-[#FFCC00]');
+                    marker.textContent = failed ? '!' : success ? '✓' : String(index + 1);
+                    rail.appendChild(marker);
+
+                    const card = document.createElement('div');
+                    card.className = 'min-w-0 rounded-2xl border border-white/[0.08] bg-[#0b0c10] p-4 transition-colors hover:border-white/20';
+
+                    const top = document.createElement('div');
+                    top.className = 'flex flex-wrap items-start justify-between gap-2';
+
+                    const title = document.createElement('h4');
+                    title.className = 'min-w-0 flex-1 text-xs sm:text-sm font-semibold leading-6 text-slate-100';
+                    title.textContent = message;
+
+                    const badge = document.createElement('span');
+                    badge.className = 'shrink-0 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ' +
+                        (failed
+                            ? 'bg-red-500/10 text-red-300'
+                            : success
+                                ? 'bg-emerald-500/10 text-emerald-300'
+                                : 'bg-white/5 text-slate-400');
+                    badge.textContent = failed ? 'Failed' : success ? 'Recorded' : (event.status || (isHop ? 'Hop result' : 'Event'));
+                    top.append(title, badge);
+
+                    const meta = document.createElement('div');
+                    meta.className = 'mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-500';
+
+                    const time = document.createElement('span');
+                    time.className = 'font-mono';
+                    time.textContent = timeLabel;
+                    meta.appendChild(time);
+
+                    if (event.stage && event.stage !== message) {
+                        const stage = document.createElement('span');
+                        stage.className = 'rounded bg-white/5 px-2 py-1 text-slate-400';
+                        stage.textContent = String(event.stage);
+                        meta.appendChild(stage);
+                    }
+
+                    card.append(top, meta);
+
+                    if (match) {
+                        const stats = document.createElement('div');
+                        stats.className = 'mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2';
+
+                        [
+                            ['Hop', match[1]],
+                            ['Nodes', match[2]],
+                            ['Relationships', match[3]]
+                        ].forEach(([label, value]) => {
+                            const stat = document.createElement('div');
+                            stat.className = 'rounded-xl border border-white/[0.06] bg-white/[0.025] px-3 py-2';
+                            const small = document.createElement('div');
+                            small.className = 'text-[9px] uppercase tracking-wider text-slate-500';
+                            small.textContent = label;
+                            const number = document.createElement('div');
+                            number.className = 'mt-1 text-sm font-bold text-[#FFCC00]';
+                            number.textContent = value;
+                            stat.append(small, number);
+                            stats.appendChild(stat);
+                        });
+
+                        card.appendChild(stats);
+                    }
+
+                    row.append(rail, card);
+                    list.appendChild(row);
                 });
+
+                tlDiv.appendChild(list);
             }
 
             const rem = activeCase.remediation || null;
@@ -2336,7 +2525,7 @@ window.executeVeyraInvestigationOnSelected = function () {
             document.getElementById('detail-rem-status').textContent = `Status: ${rem?.status || 'Not recorded'}`;
 
             loadCaseAgentHistory(cid);
-            switchCaseTab('overview');
+            switchCaseTab('graph');
             initCaseEvidenceGraph();
         }
 
@@ -2355,71 +2544,190 @@ window.executeVeyraInvestigationOnSelected = function () {
             if (tabName === 'graph') resizeCaseGraph();
         }
 
-        async function loadCaseAgentHistory(caseId) {
-            const chatMsgs = document.getElementById('case-agent-messages');
+        function isInternalCaseAgentMessage(message) {
+            const role = String(message?.role || "").toLowerCase();
+            const text = String(message?.text ?? message?.content ?? "");
+
+            if (["system", "developer"].includes(role)) return true;
+
+            // Hide leaked orchestration instructions and injected evidence payloads,
+            // without filtering ordinary questions or natural-language answers.
+            const internalMarkers = [
+                "You are VEYRA",
+                "Choose exactly one risk level",
+                "Live case evidence JSON",
+                "Return ONLY these two fields",
+                "Conversational memory is fully isolated"
+            ];
+
+            return internalMarkers.some(marker =>
+                text.toLowerCase().includes(marker.toLowerCase())
+            );
+        }
+
+        function appendCaseAgentBubble(role, text, options = {}) {
+            const chatMsgs = document.getElementById("case-agent-messages");
             if (!chatMsgs) return;
 
-            chatMsgs.innerHTML =
-                '<div class="p-2.5 text-slate-400 text-[11px]">Loading saved conversation...</div>';
+            const isUser = role === "user";
+            const isError = options.error === true;
 
-            try {
-                const sessionId = `case-${caseId}`;
-                const url = getApiUrl(
-                    `/api/chat/history?session_id=${encodeURIComponent(sessionId)}`
-                );
-                const res = await fetch(url);
+            const row = document.createElement("div");
+            row.className = `flex w-full ${isUser ? "justify-end" : "justify-start"} animate-[fadeIn_180ms_ease-out]`;
 
-                if (!res.ok) {
-                    throw new Error(`History request failed: ${res.status}`);
-                }
+            const stack = document.createElement("div");
+            stack.className = `flex max-w-[92%] sm:max-w-[82%] flex-col gap-1.5 ${isUser ? "items-end" : "items-start"}`;
 
-                const data = await res.json();
-                renderCaseAgentMessages(caseId, data.messages || []);
+            const label = document.createElement("div");
+            label.className = "flex items-center gap-2 px-1 text-[10px] font-semibold text-slate-500";
 
-                if (!(data.messages || []).length) {
-                    chatMsgs.innerHTML =
-                        '<div class="p-2.5 text-slate-400 text-[11px]">No saved conversation yet. Ask Veyra about this case.</div>';
-                }
-            } catch (err) {
-                console.error('[VEYRA CASE HISTORY]', err);
-                chatMsgs.innerHTML =
-                    '<div class="p-2.5 text-amber-400 text-[11px]">Could not load saved conversation. Check the chat history API.</div>';
+            if (!isUser) {
+                const icon = document.createElement("span");
+                icon.className = "flex h-5 w-5 items-center justify-center rounded-lg border border-[#FFCC00]/25 bg-[#FFCC00]/10 text-[#FFCC00]";
+                icon.textContent = "✦";
+                label.appendChild(icon);
             }
+
+            const name = document.createElement("span");
+            name.textContent = isUser ? "You" : "Veyra";
+            label.appendChild(name);
+
+            const bubble = document.createElement("div");
+            bubble.className = isUser
+                ? "rounded-2xl rounded-br-md border border-[#FFCC00]/20 bg-[#FFCC00] px-4 py-3 text-sm leading-6 text-[#15120a] shadow-lg shadow-black/10"
+                : `rounded-2xl rounded-bl-md border px-4 py-3 text-sm leading-6 whitespace-pre-wrap break-words shadow-lg shadow-black/10 ${
+                    isError
+                        ? "border-red-500/20 bg-red-500/[0.07] text-red-300"
+                        : "border-white/10 bg-[#17181f] text-slate-200"
+                }`;
+            bubble.textContent = String(text ?? "");
+
+            stack.append(label, bubble);
+            row.appendChild(stack);
+            chatMsgs.appendChild(row);
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+            return bubble;
         }
 
         function renderCaseAgentMessages(caseId, history) {
-            const chatMsgs = document.getElementById('case-agent-messages');
-            chatMsgs.innerHTML = '';
-            history.forEach(m => {
-                const role = m.role === 'user' ? 'You' : 'Agent';
-                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl ${m.role === 'user' ? 'bg-[#FFCC00]/10 text-white text-right ml-4' : 'bg-classifiedGray text-slate-200 mr-4'} text-[11px]"><strong>${role}:</strong> ${escapeHtml(m.text)}</div>`;
+            const chatMsgs = document.getElementById("case-agent-messages");
+            if (!chatMsgs) return;
+
+            chatMsgs.innerHTML = "";
+
+            const visibleHistory = (Array.isArray(history) ? history : [])
+                .filter(m => !isInternalCaseAgentMessage(m))
+                .filter(m => ["user", "assistant", "agent"].includes(String(m.role || "").toLowerCase()));
+
+            if (!visibleHistory.length) {
+                const welcome = document.createElement("div");
+                welcome.className = "flex min-h-[220px] flex-col items-center justify-center px-5 py-8 text-center";
+                welcome.innerHTML = `
+                    <div class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#FFCC00]/25 bg-[#FFCC00]/10 text-2xl text-[#FFCC00]">✦</div>
+                    <h4 class="text-base font-bold text-white">Let's examine this case.</h4>
+                    <p class="mt-2 max-w-sm text-xs leading-6 text-slate-400">Ask Veyra why the message was flagged, which connected evidence matters, or what remains uncertain.</p>
+                    <div class="mt-5 flex flex-wrap justify-center gap-2">
+                        <button type="button" data-case-question="Why was this case assigned its risk level?" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-300 transition hover:border-[#FFCC00]/40 hover:text-[#FFCC00]">Why this risk level?</button>
+                        <button type="button" data-case-question="What evidence supports this assessment?" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-300 transition hover:border-[#FFCC00]/40 hover:text-[#FFCC00]">Show key evidence</button>
+                        <button type="button" data-case-question="What information is still uncertain?" class="rounded-full border border-white/10 bg-white/[0.03] px-3 py-2 text-[11px] text-slate-300 transition hover:border-[#FFCC00]/40 hover:text-[#FFCC00]">What's uncertain?</button>
+                    </div>`;
+                welcome.querySelectorAll("[data-case-question]").forEach(button => {
+                    button.addEventListener("click", () => {
+                        const input = document.getElementById("case-agent-input");
+                        if (input) {
+                            input.value = button.dataset.caseQuestion;
+                            sendCaseAgentMessage();
+                        }
+                    });
+                });
+                chatMsgs.appendChild(welcome);
+                return;
+            }
+
+            visibleHistory.forEach(m => {
+                const role = String(m.role || "").toLowerCase() === "user" ? "user" : "assistant";
+                appendCaseAgentBubble(role, m.text ?? m.content ?? "");
             });
-            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        }
+
+        async function loadCaseAgentHistory(caseId) {
+            const chatMsgs = document.getElementById("case-agent-messages");
+            if (!chatMsgs) return;
+
+            chatMsgs.innerHTML = '<div class="flex items-center gap-3 py-6 text-xs text-slate-400"><span class="h-2 w-2 animate-pulse rounded-full bg-[#FFCC00]"></span>Loading this case conversation…</div>';
+
+            try {
+                const sessionId = `case-${caseId}`;
+                const url = getApiUrl(`/api/chat/history?session_id=${encodeURIComponent(sessionId)}`);
+                const res = await fetch(url, { cache: "no-store" });
+
+                if (!res.ok) throw new Error(`History request failed: ${res.status}`);
+
+                const data = await res.json();
+                renderCaseAgentMessages(caseId, data.messages || []);
+            } catch (err) {
+                console.error("[VEYRA CASE HISTORY]", err);
+                chatMsgs.innerHTML = "";
+                appendCaseAgentBubble("assistant", "I couldn't load the saved conversation. Please check the chat service and try again.", { error: true });
+            }
         }
 
         async function sendCaseAgentMessage() {
-            const input = document.getElementById('case-agent-input');
-            const q = input.value.trim();
-            if (!q || !activeCase) return;
-            const caseId = activeCase.id || activeCase.investigation_id;
+            const input = document.getElementById("case-agent-input");
+            const sendButton = document.getElementById("case-agent-send");
+            const q = input?.value.trim();
 
-            const chatMsgs = document.getElementById('case-agent-messages');
-            chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-[#FFCC00]/10 text-white text-right ml-4 text-[11px]"><strong>You:</strong> ${escapeHtml(q)}</div>`;
-            input.value = '';
+            if (!q || !activeCase) return;
+
+            const caseId = activeCase.id || activeCase.investigation_id;
+            if (!caseId) {
+                appendCaseAgentBubble("assistant", "This case has no valid ID, so I can't open its conversation.", { error: true });
+                return;
+            }
+
+            input.value = "";
+            input.focus();
+            appendCaseAgentBubble("user", q);
+
+            if (sendButton) sendButton.disabled = true;
+            if (input) input.disabled = true;
+
+            const chatMsgs = document.getElementById("case-agent-messages");
+            const pending = document.createElement("div");
+            pending.className = "flex items-center gap-3 py-3 text-xs text-slate-400";
+            pending.innerHTML = '<span class="flex gap-1"><i class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#FFCC00]"></i><i class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#FFCC00]" style="animation-delay:120ms"></i><i class="h-1.5 w-1.5 animate-bounce rounded-full bg-[#FFCC00]" style="animation-delay:240ms"></i></span><span>Veyra is reviewing the case…</span>';
+            chatMsgs.appendChild(pending);
             chatMsgs.scrollTop = chatMsgs.scrollHeight;
 
             try {
-                const res = await fetch(getApiUrl('/api/chat'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                const res = await fetch(getApiUrl("/api/chat"), {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ question: q, session_id: `case-${caseId}` })
                 });
+
                 if (!res.ok) throw new Error(`Chat request failed: ${res.status}`);
+
                 const data = await res.json();
-                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-classifiedGray text-slate-200 mr-4 text-[11px]"><strong>Agent:</strong> ${escapeHtml(data.answer)}</div>`;
-                chatMsgs.scrollTop = chatMsgs.scrollHeight;
-            } catch (e) {
-                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-classifiedGray text-red-400 mr-4 text-[11px]"><strong>Agent:</strong> Error connecting to FalkorDB agent service.</div>`;
+                pending.remove();
+
+                const answer = data.answer ?? data.response ?? data.message;
+                if (answer == null || String(answer).trim() === "") {
+                    appendCaseAgentBubble("assistant", "I didn't receive a usable answer. Please try asking the question again.", { error: true });
+                } else {
+                    appendCaseAgentBubble("assistant", String(answer));
+                }
+            } catch (err) {
+                console.error("[VEYRA CASE CHAT]", err);
+                pending.remove();
+                appendCaseAgentBubble("assistant", "I couldn't reach the Veyra chat service. Your case data has not been changed; please try again shortly.", { error: true });
+            } finally {
+                if (sendButton) sendButton.disabled = false;
+                if (input) {
+                    input.disabled = false;
+                    input.focus();
+                }
             }
         }
 
@@ -2467,10 +2775,26 @@ window.executeVeyraInvestigationOnSelected = function () {
             }
 
             const nodeMeshes = {};
-            const positions = [[-1.2, 0, 0], [0, 0.8, 0], [1.2, -0.5, 0]];
+            const nodePositions = new Map();
+            const nodeCount = gData.nodes.length;
+
+            // Distribute all evidence nodes in 3D space to prevent overlap.
+            gData.nodes.forEach((node, idx) => {
+                const t = (idx + 0.5) / nodeCount;
+                const y = 1 - 2 * t;
+                const radius = Math.sqrt(Math.max(0, 1 - y * y));
+                const angle = idx * Math.PI * (3 - Math.sqrt(5));
+                const spread = Math.max(1.5, Math.sqrt(nodeCount) * 0.32);
+
+                nodePositions.set(String(node.id), [
+                    Math.cos(angle) * radius * spread,
+                    y * spread,
+                    Math.sin(angle) * radius * spread
+                ]);
+            });
 
             gData.nodes.forEach((n, idx) => {
-                const pos = positions[idx] || [0, 0, 0];
+                const pos = nodePositions.get(String(n.id));
                 const geo = new THREE.SphereGeometry(0.16, 32, 32);
                 const mat = new THREE.MeshStandardMaterial({
                     color: n.color || 0xFFCC00,
