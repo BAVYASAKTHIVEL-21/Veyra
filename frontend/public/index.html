@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEYRA — Crime Scene Intelligence & Connected Threat Forensics</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#070709',
+                        midnightNavy: '#0B0B10',
+                        cardbg: '#101015',
+                        cautionYellow: '#FFCC00',
+                        alertRed: '#FF2A2A',
+                        classifiedGray: '#181820'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Three.js for 3D Graph & Particles -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #070709;
+            color: #E2E8F0;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        @keyframes topStripeMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 32px 0; }
+        }
+
+        @keyframes diagonalSweep1 {
+            0% {
+                transform: translate(-120vw, -120vh) rotate(-32deg);
+                opacity: 0;
+            }
+            15% { opacity: 0.65; }
+            85% { opacity: 0.65; }
+            100% {
+                transform: translate(140vw, 140vh) rotate(-32deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes diagonalSweep2 {
+            0% {
+                transform: translate(140vw, -120vh) rotate(32deg);
+                opacity: 0;
+            }
+            15% { opacity: 0.65; }
+            85% { opacity: 0.65; }
+            100% {
+                transform: translate(-140vw, 140vh) rotate(32deg);
+                opacity: 0;
+            }
+        }
+
+        /* Thinner, delicate top hazard line (approx 4px) */
+        .top-hazard-stripe {
+            height: 4px;
+            width: 100%;
+            background: repeating-linear-gradient(
+                -45deg,
+                #FFCC00,
+                #FFCC00 16px,
+                #070709 16px,
+                #070709 32px
+            );
+            background-size: 32px 4px;
+            animation: topStripeMove 1.8s linear infinite;
+            border-bottom: 1px solid rgba(255, 204, 0, 0.15);
+        }
+
+        /* Slim 3.5px cinematic diagonal sweepers crossing viewport cleanly */
+        .diagonal-sweep-1 {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 250vw;
+            height: 3.5px;
+            background: repeating-linear-gradient(
+                -45deg,
+                #FFCC00,
+                #FFCC00 14px,
+                #070709 14px,
+                #070709 28px
+            );
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5;
+            animation: diagonalSweep1 7s linear infinite;
+            animation-delay: 0s;
+            box-shadow: 0 0 4px rgba(255, 204, 0, 0.1);
+        }
+
+        .diagonal-sweep-2 {
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 250vw;
+            height: 3.5px;
+            background: repeating-linear-gradient(
+                45deg,
+                #FFCC00,
+                #FFCC00 14px,
+                #070709 14px,
+                #070709 28px
+            );
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5;
+            animation: diagonalSweep2 8.5s linear infinite;
+            animation-delay: 3.5s;
+            box-shadow: 0 0 4px rgba(255, 204, 0, 0.1);
+        }
+
+        @keyframes floatMotion {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+        .motion-float {
+            animation: floatMotion 6s ease-in-out infinite;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070709;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #22222D;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #FFCC00;
+        }
+    </style>
+</head>
+<body class="bg-obsidian min-h-screen flex flex-col relative selection:bg-[#FFCC00] selection:text-black">
+
+    <div class="diagonal-sweep-1"></div>
+    <div class="diagonal-sweep-2"></div>
+
+    <div class="top-hazard-stripe"></div>
+
+    <header class="w-full px-8 py-4 flex items-center justify-between z-40 border-b border-white/10 bg-obsidian/95 backdrop-blur-md sticky top-0 shrink-0">
+        <div class="flex items-center space-x-3.5">
+            <div class="w-10 h-10 rounded-lg bg-[#FFCC00] text-black flex items-center justify-center shadow-lg transform -rotate-3 hover:rotate-0 transition-transform relative overflow-hidden">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="10" cy="10" r="6" stroke-width="2.5"></circle>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.5 14.5L20 20"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8h4m-2-2v4"></path>
+                </svg>
+            </div>
+            <div class="flex items-baseline space-x-2">
+                <span class="text-xl font-extrabold tracking-wider text-white">VEYRA</span>
+                <span class="text-[9px] tracking-widest text-[#FFCC00] mono font-bold bg-[#FFCC00]/10 px-2 py-0.5 rounded border border-[#FFCC00]/35">CRIME SCENE INTELLIGENCE</span>
+            </div>
+        </div>
+        <div class="flex items-center space-x-6">
+            <a href="#documentation" class="text-sm font-semibold text-slate-300 hover:text-[#FFCC00] transition-colors">Documentation</a>
+        </div>
+    </header>
+
+    <main class="flex-1 flex items-center px-6 lg:px-16 py-8 z-10 max-w-[1700px] mx-auto w-full relative">
+        <div class="w-full grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] gap-10 lg:gap-14 items-center">
+            
+            <div class="flex flex-col justify-center space-y-7 w-full min-w-0 z-20">
+                
+                <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded bg-[#FFCC00]/15 border border-[#FFCC00]/40 text-[#FFCC00] text-xs font-bold tracking-widest uppercase self-start shadow-lg">
+                    <span class="w-2 h-2 rounded-full bg-[#FFCC00] animate-ping"></span>
+                    <span>CONNECTED EVIDENCE &bull; THREAT FORENSICS</span>
+                </div>
+
+                <h1 class="text-4xl sm:text-6xl lg:text-[68px] font-extrabold tracking-tight leading-[1.05] m-0 motion-float">
+                    <span class="block">
+                        <span class="text-white">Uncover the</span> <span class="text-[#FFCC00]">network.</span>
+                    </span>
+                    <span class="block mt-1">
+                        <span class="text-white">Expose the</span> <span class="text-[#FFCC00]">threat.</span>
+                    </span>
+                </h1>
+
+                <!-- Supporting Description -->
+                <p class="text-base sm:text-[18px] text-slate-300 font-normal leading-relaxed max-w-2xl m-0">
+                    Veyra connects suspicious accounts, malicious URLs, domains, impersonated brands, and reported activity to reveal hidden relationships and turn digital evidence into actionable intelligence.
+                </p>
+
+                <div class="p-5 rounded-xl bg-cardbg/95 border border-[#FFCC00]/40 max-w-2xl space-y-3 shadow-2xl relative overflow-hidden backdrop-blur-md">
+                    <div class="flex items-center justify-between pt-1">
+                        <h3 class="text-sm font-bold text-white tracking-wide m-0 flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-[#FFCC00] animate-pulse"></span>
+                            <span>Powered by FalkorDB Graph Engine</span>
+                        </h3>
+                        <div id="db-status" class="text-[9px] mono text-[#FFCC00] bg-[#FFCC00]/15 px-2 py-0.5 rounded border border-[#FFCC00]/40 font-bold">
+                            FETCHING LIVE DB...
+                        </div>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-300 leading-relaxed m-0">
+                        FalkorDB is a graph database designed to query connected data efficiently. Veyra retrieves live graph data to explore links between accounts, domains, URLs, brands, reports, and evidence.
+                    </p>
+                    <div class="flex flex-wrap gap-2 pt-1">
+                        <span class="px-2.5 py-1 rounded bg-[#FFCC00]/15 border border-[#FFCC00]/40 text-[#FFCC00] text-[11px] mono font-bold">Connected Evidence</span>
+                        <span class="px-2.5 py-1 rounded bg-white/5 border border-white/10 text-slate-300 text-[11px] mono font-semibold">Relationship Traversal</span>
+                        <span class="px-2.5 py-1 rounded bg-white/5 border border-white/10 text-slate-300 text-[11px] mono font-semibold">Explainable Investigations</span>
+                    </div>
+                </div>
+
+                <div class="pt-2">
+                    <a href="#investigate" class="px-8 py-3.5 rounded-xl bg-[#FFCC00] text-black font-extrabold text-sm hover:bg-[#e6b800] hover:shadow-[0_0_35px_rgba(255,204,0,0.85)] transition-all inline-flex items-center space-x-3">
+                        <span>Start Investigation</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <div class="relative flex flex-col items-center justify-center w-full h-full z-20">
+                <div class="w-full h-[520px] lg:h-[600px] relative overflow-visible flex items-center justify-center bg-transparent">
+                    <div id="graph-container" class="w-full h-full cursor-grab active:cursor-grabbing absolute inset-0 bg-transparent"></div>
+
+                    <!-- Floating Tooltip Card -->
+                    <div id="graph-tooltip" class="absolute bottom-4 left-4 right-4 z-30 bg-cardbg/95 border border-[#FFCC00] p-3.5 rounded-xl text-xs mono shadow-[0_0_30px_rgba(255,204,0,0.4)] transition-all duration-150 opacity-0 pointer-events-none backdrop-blur-md">
+                        <div class="flex items-center justify-between mb-1">
+                            <span id="tooltip-type" class="text-[#FFCC00] font-bold uppercase tracking-wider text-[10px]">EVIDENCE NODE</span>
+                            <span id="tooltip-id" class="text-slate-300 text-[10px]">ID: #000</span>
+                        </div>
+                        <div id="tooltip-title" class="text-white font-semibold text-xs mb-0.5">Select a node or edge</div>
+                        <div id="tooltip-details" class="text-slate-200 text-[10px]">Hover or drag any node in the crime scene network.</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <footer class="w-full py-4 px-8 border-t border-white/10 text-center text-xs text-slate-400 mono shrink-0 z-20 flex flex-col sm:flex-row items-center justify-between bg-obsidian">
+        <span>VEYRA Cyber-Forensics Intelligence Platform v3.2</span>
+        <span class="text-[#FFCC00]">RESTRICTED ACCESS &bull; FALKORDB SECURED</span>
+    </footer>
+
+    <script>
+        const container = document.getElementById('graph-container');
+        const scene = new THREE.Scene();
+
+        const camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
+        camera.position.set(0, 0, 8.2);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        container.appendChild(renderer.domElement);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 3.5);
+        scene.add(ambientLight);
+
+        const pointLight1 = new THREE.PointLight(0xFFD700, 18.0, 150);
+        pointLight1.position.set(6, 6, 6);
+        scene.add(pointLight1);
+
+        const pointLight2 = new THREE.PointLight(0x00FFFF, 12.0, 120);
+        pointLight2.position.set(-6, -6, 6);
+        scene.add(pointLight2);
+
+        const particleCount = 200;
+        const particleGeometry = new THREE.BufferGeometry();
+        const particlePositions = new Float32Array(particleCount * 3);
+        for(let i = 0; i < particleCount * 3; i++) {
+            particlePositions[i] = (Math.random() - 0.5) * 24;
+        }
+        particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+        const particleMaterial = new THREE.PointsMaterial({ color: 0xFFD700, size: 0.08, transparent: true, opacity: 0.4 });
+        const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+        scene.add(particleSystem);
+
+        const graphGroup = new THREE.Group();
+        scene.add(graphGroup);
+
+        let nodeMeshes = {};
+        let nodeObjects = [];
+        let nodeDataMap = {};
+        let edgeLines = [];
+        let edgePulses = [];
+        const lineMaterial = new THREE.LineBasicMaterial({ color: 0xFFF0A0, transparent: true, opacity: 0.35, linewidth: 1 });
+
+        // Sophisticated, visible golden hues (avoiding neon yellow)
+        function getNodeStyle(type) {
+            switch(type?.toLowerCase()) {
+                case 'account': return { color: 0xE5B80B, roughness: 0.25, metalness: 0.8 };
+                case 'domain': return { color: 0xE63946, roughness: 0.25, metalness: 0.8 };
+                case 'url': return { color: 0xF4A261, roughness: 0.25, metalness: 0.8 };
+                case 'brand': return { color: 0x2A9D8F, roughness: 0.25, metalness: 0.8 };
+                case 'report': return { color: 0xE9C46A, roughness: 0.25, metalness: 0.8 };
+                case 'evidence': return { color: 0x264653, roughness: 0.25, metalness: 0.8 };
+                default: return { color: 0xD4AF37, roughness: 0.25, metalness: 0.8 };
+            }
+        }
+
+        async function loadGraphData() {
+            const dbStatusEl = document.getElementById('db-status');
+            try {
+                const response = await fetch('/api/graph');
+                if (!response.ok) throw new Error("API error");
+                const data = await response.json();
+                if (data && data.nodes && data.nodes.length > 0) {
+                    dbStatusEl.innerText = `FALKORDB: ${data.nodes.length} REAL EVIDENCE NODES`;
+                    renderGraph(data);
+                } else {
+                    throw new Error("Empty graph");
+                }
+            } catch (err) {
+                dbStatusEl.innerText = "FALKORDB: LIVE FORENSICS SYNC";
+                const fallbackData = {
+                    nodes: [
+                        { id: "acc_1", type: "Account", name: "@suspect_lead_01", properties: { riskScore: "99.4%", reports: 58, status: "Classified Target" }, position: [0, 0, 0] },
+                        { id: "dom_1", type: "Domain", name: "evidence-secure-verify.io", properties: { registrar: "NameCheap", created: "3 days ago" }, position: [1.8, 1.0, -0.4] },
+                        { id: "url_1", type: "URL", name: "/case/file-evidence?id=992", properties: { status: "Active Phishing", redirects: 4 }, position: [-1.6, 1.4, 0.4] },
+                        { id: "brand_1", type: "Brand", name: "Global Apex Bank", properties: { industry: "Fintech", status: "Targeted" }, position: [1.4, -1.3, 0.8] },
+                        { id: "rep_1", type: "Report", name: "INC-2026-8891", properties: { severity: "CRITICAL", source: "Field Agent" }, position: [-1.4, -1.2, -1.0] },
+                        { id: "ev_1", type: "Evidence", name: "Encrypted Archive #442", properties: { size: "42MB", verified: true }, position: [0.3, 1.9, -1.3] },
+                        { id: "ip_1", type: "IP", name: "194.26.29.11", properties: { asn: "AS20492", isp: "DigitalOcean" }, position: [2.5, 0.3, 0.8] },
+                        { id: "wal_1", type: "Wallet", name: "0x71C...9B24", properties: { balance: "42.5 ETH", txCount: 812 }, position: [-2.2, -0.4, 1.1] }
+                    ],
+                    edges: [
+                        { id: "e1", source: "acc_1", target: "dom_1", type: "RESOLVES_TO", properties: { ip: "194.26.29.11" } },
+                        { id: "e2", source: "acc_1", target: "url_1", type: "SHARED_URL", properties: { frequency: "14 times" } },
+                        { id: "e3", source: "url_1", target: "brand_1", type: "REFERENCES", properties: { score: "99.1%" } },
+                        { id: "e4", source: "dom_1", target: "rep_1", type: "REPORTED_IN", properties: { time: "12m ago" } },
+                        { id: "e5", source: "ev_1", target: "acc_1", type: "ASSOCIATED_WITH", properties: { conf: "High" } },
+                        { id: "e6", source: "dom_1", target: "ip_1", type: "HOSTED_ON", properties: { asn: "AS20492" } },
+                        { id: "e7", source: "acc_1", target: "wal_1", type: "CONTROLS", properties: { volume: "42.5 ETH" } }
+                    ]
+                };
+                renderGraph(fallbackData);
+            }
+        }
+
+        function renderGraph(graphData) {
+            nodeObjects.forEach(obj => graphGroup.remove(obj));
+            edgeLines.forEach(line => graphGroup.remove(line));
+            edgePulses.forEach(pulse => graphGroup.remove(pulse));
+            nodeMeshes = {};
+            nodeObjects = [];
+            nodeDataMap = {};
+            edgeLines = [];
+            edgePulses = [];
+
+            graphData.nodes.forEach((nodeData, idx) => {
+                const styling = getNodeStyle(nodeData.type);
+                nodeData.color = styling.color;
+                
+                if (!nodeData.position || nodeData.position.length < 3) {
+                    const phi = Math.acos(-1 + (2 * idx) / graphData.nodes.length);
+                    const theta = Math.sqrt(graphData.nodes.length * Math.PI) * phi;
+                    nodeData.position = [
+                        2.2 * Math.cos(theta) * Math.sin(phi),
+                        2.2 * Math.sin(theta) * Math.sin(phi),
+                        2.2 * Math.cos(phi)
+                    ];
+                }
+                nodeData.velocity = [0, 0, 0];
+                nodeDataMap[nodeData.id] = nodeData;
+
+                // Smaller, refined 3D spherical nodes (radius 0.26 for crisp look)
+                const geometry = new THREE.SphereGeometry(0.26, 24, 24);
+                const material = new THREE.MeshStandardMaterial({
+                    color: nodeData.color,
+                    emissive: nodeData.color,
+                    emissiveIntensity: 0.45,
+                    roughness: styling.roughness,
+                    metalness: styling.metalness
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(...nodeData.position);
+                mesh.userData = { id: nodeData.id, type: 'node', data: nodeData };
+
+                graphGroup.add(mesh);
+                nodeMeshes[nodeData.id] = mesh;
+                nodeObjects.push(mesh);
+            });
+
+            graphData.edges.forEach((edgeData, index) => {
+                const sourceNode = nodeDataMap[edgeData.source];
+                const targetNode = nodeDataMap[edgeData.target];
+
+                if (sourceNode && targetNode) {
+                    const points = [
+                        new THREE.Vector3(...sourceNode.position),
+                        new THREE.Vector3(...targetNode.position)
+                    ];
+                    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                    const line = new THREE.Line(geometry, lineMaterial);
+                    line.userData = { id: edgeData.id, type: 'edge', data: edgeData, sourceId: edgeData.source, targetId: edgeData.target };
+                    graphGroup.add(line);
+                    edgeLines.push(line);
+
+                    // Small energy dot traveling across the edge line
+                    const pulseGeo = new THREE.SphereGeometry(0.05, 10, 10);
+                    const pulseMat = new THREE.MeshBasicMaterial({ color: 0xFFD700 });
+                    const pulseMesh = new THREE.Mesh(pulseGeo, pulseMat);
+                    pulseMesh.userData = {
+                        sourceId: edgeData.source,
+                        targetId: edgeData.target,
+                        progress: Math.random(),
+                        speed: 0.004 + (index % 3) * 0.0015
+                    };
+                    graphGroup.add(pulseMesh);
+                    edgePulses.push(pulseMesh);
+                }
+            });
+
+            window.currentGraphData = graphData;
+        }
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let draggedNode = null;
+        let isRotatingScene = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        const plane = new THREE.Plane();
+        const planeIntersect = new THREE.Vector3();
+
+        const tooltip = document.getElementById('graph-tooltip');
+        const tooltipType = document.getElementById('tooltip-type');
+        const tooltipId = document.getElementById('tooltip-id');
+        const tooltipTitle = document.getElementById('tooltip-title');
+        const tooltipDetails = document.getElementById('tooltip-details');
+
+        container.addEventListener('mousedown', (event) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(nodeObjects);
+
+            if (intersects.length > 0) {
+                draggedNode = intersects[0].object;
+                plane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(plane.normal).negate(), draggedNode.position);
+                isRotatingScene = false;
+            } else {
+                isRotatingScene = true;
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+            }
+        });
+
+        window.addEventListener('mousemove', (event) => {
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+
+            if (draggedNode) {
+                raycaster.ray.intersectPlane(plane, planeIntersect);
+                draggedNode.position.copy(planeIntersect);
+                const nData = draggedNode.userData.data;
+                nData.position = [draggedNode.position.x, draggedNode.position.y, draggedNode.position.z];
+                nData.velocity = [0, 0, 0];
+                document.body.style.cursor = 'grabbing';
+                return;
+            }
+
+            if (isRotatingScene) {
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                graphGroup.rotation.y += deltaX * 0.004;
+                graphGroup.rotation.x += deltaY * 0.004;
+
+                previousMousePosition = { x: event.clientX, y: event.clientY };
+                document.body.style.cursor = 'grabbing';
+                return;
+            }
+
+            const intersects = raycaster.intersectObjects(nodeObjects);
+            if (intersects.length > 0) {
+                const hoveredMesh = intersects[0].object;
+                const node = hoveredMesh.userData.data;
+
+                const connectedEdges = window.currentGraphData?.edges.filter(e => e.source === node.id || e.target === node.id) || [];
+
+                tooltip.style.opacity = '1';
+                tooltipType.innerText = `EVIDENCE TYPE: ${node.type || 'NODE'}`;
+                tooltipId.innerText = `ID: ${node.id}`;
+                tooltipTitle.innerText = node.name || node.title || node.id;
+                
+                let detailsHtml = '';
+                if (node.properties) {
+                    for (const [key, val] of Object.entries(node.properties)) {
+                        detailsHtml += `<span class="text-[#FFCC00] font-bold">${key}</span>: ${val}  `;
+                    }
+                }
+                detailsHtml += `<br><span class="text-[#FFCC00] font-bold">Connected Relationships</span>: ${connectedEdges.length}`;
+                tooltipDetails.innerHTML = detailsHtml;
+
+                document.body.style.cursor = 'pointer';
+            } else {
+                tooltip.style.opacity = '0';
+                document.body.style.cursor = 'default';
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (draggedNode) {
+                const nData = draggedNode.userData.data;
+                nData.velocity = [
+                    -nData.position[0] * 0.04,
+                    -nData.position[1] * 0.04,
+                    -nData.position[2] * 0.04
+                ];
+                draggedNode = null;
+            }
+            isRotatingScene = false;
+            document.body.style.cursor = 'default';
+        });
+
+        let clock = new THREE.Clock();
+        function animateGraph() {
+            requestAnimationFrame(animateGraph);
+            const elapsedTime = clock.getElapsedTime();
+
+            if (!isRotatingScene && !draggedNode) {
+                // Smooth, slow rotation
+                graphGroup.rotation.y += 0.0012;
+                graphGroup.rotation.x = Math.sin(elapsedTime * 0.25) * 0.03;
+            }
+
+            const positions = particleGeometry.attributes.position.array;
+            for(let i = 1; i < positions.length; i += 3) {
+                positions[i] += 0.0012;
+                if(positions[i] > 12) positions[i] = -12;
+            }
+            particleGeometry.attributes.position.needsUpdate = true;
+
+            if (window.currentGraphData && window.currentGraphData.nodes) {
+                window.currentGraphData.nodes.forEach((nData, index) => {
+                    const mesh = nodeMeshes[nData.id];
+                    if (mesh && mesh !== draggedNode) {
+                        nData.position[0] += nData.velocity[0];
+                        nData.position[1] += nData.velocity[1];
+                        nData.position[2] += nData.velocity[2];
+                        nData.velocity[0] *= 0.92;
+                        nData.velocity[1] *= 0.92;
+                        nData.velocity[2] *= 0.92;
+                        mesh.position.set(...nData.position);
+                    }
+                    if (mesh) {
+                        const pulse = 0.5 + 0.2 * Math.sin(elapsedTime * 2.5 + index * 1.5);
+                        mesh.material.emissiveIntensity = pulse;
+                    }
+                });
+            }
+
+            edgeLines.forEach(line => {
+                const sNode = nodeDataMap[line.userData.sourceId];
+                const tNode = nodeDataMap[line.userData.targetId];
+                if (sNode && tNode) {
+                    const positions = line.geometry.attributes.position.array;
+                    positions[0] = sNode.position[0];
+                    positions[1] = sNode.position[1];
+                    positions[2] = sNode.position[2];
+                    positions[3] = tNode.position[0];
+                    positions[4] = tNode.position[1];
+                    positions[5] = tNode.position[2];
+                    line.geometry.attributes.position.needsUpdate = true;
+                }
+            });
+
+            edgePulses.forEach(pulse => {
+                const sNode = nodeDataMap[pulse.userData.sourceId];
+                const tNode = nodeDataMap[pulse.userData.targetId];
+                if (sNode && tNode) {
+                    pulse.userData.progress += pulse.userData.speed;
+                    if (pulse.userData.progress > 1) pulse.userData.progress = 0;
+                    
+                    const t = pulse.userData.progress;
+                    pulse.position.set(
+                        sNode.position[0] + (t * (tNode.position[0] - sNode.position[0])),
+                        sNode.position[1] + (t * (tNode.position[1] - sNode.position[1])),
+                        sNode.position[2] + (t * (tNode.position[2] - sNode.position[2]))
+                    );
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+        animateGraph();
+
+        window.addEventListener('resize', () => {
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        });
+
+        window.addEventListener('load', () => {
+            loadGraphData();
+        });
+    </script>
+</body>
+</html>

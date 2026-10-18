@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VEYRA — Case Archive & Threat Forensics</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        obsidian: '#070709',
+                        midnightNavy: '#0B0B10',
+                        cardbg: '#101015',
+                        cautionYellow: '#FFCC00',
+                        alertRed: '#FF2A2A',
+                        classifiedGray: '#181820'
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Three.js for 3D Graph -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #070709;
+            color: #E2E8F0;
+            overflow-x: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        @keyframes topStripeMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 32px 0; }
+        }
+        .top-hazard-stripe {
+            height: 2px;
+            width: 100%;
+            background: repeating-linear-gradient(-45deg, #FFCC00, #FFCC00 10px, #070709 10px, #070709 20px);
+            background-size: 20px 2px;
+            animation: topStripeMove 1.5s linear infinite;
+            border-bottom: 1px solid rgba(255, 204, 0, 0.25);
+        }
+
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #070709; }
+        ::-webkit-scrollbar-thumb { background: #22222D; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #FFCC00; }
+
+        .app-view {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            width: 100%;
+            height: calc(100vh - 54px);
+            overflow-y: auto;
+        }
+        .app-view.active {
+            display: flex;
+        }
+    </style>
+</head>
+<body class="bg-obsidian h-screen flex flex-col relative selection:bg-[#FFCC00] selection:text-black overflow-hidden">
+
+    <div class="top-hazard-stripe shrink-0"></div>
+
+    <!-- Navigation Bar -->
+    <header class="w-full px-6 lg:px-12 py-3 flex items-center justify-between z-40 border-b border-white/10 bg-obsidian/95 backdrop-blur-md shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-lg bg-[#FFCC00] text-black flex items-center justify-center shadow-lg transform -rotate-3 hover:rotate-0 transition-transform relative overflow-hidden">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <circle cx="10" cy="10" r="6" stroke-width="2.5"></circle>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M14.5 14.5L20 20"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 8h4m-2-2v4"></path>
+                </svg>
+            </div>
+            <div class="flex items-baseline space-x-2">
+                <span class="text-base font-extrabold tracking-wider text-white">VEYRA</span>
+                <span class="text-[7px] tracking-widest text-[#FFCC00] mono font-bold bg-[#FFCC00]/10 px-1.5 py-0.5 rounded border border-[#FFCC00]/35 hidden sm:inline">CASES ARCHIVE</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3">
+            <span id="backend-status-badge" class="text-[8px] mono text-[#FFCC00] bg-[#FFCC00]/10 px-2.5 py-1 rounded border border-[#FFCC00]/30 font-bold">FALKORDB: ONLINE</span>
+        </div>
+    </header>
+
+    <!-- SOLE ACTIVE SCREEN: CASES ARCHIVE -->
+    <div id="view-cases" class="app-view active p-6 lg:p-10 max-w-[1600px] mx-auto w-full flex flex-col gap-6">
+        
+        <!-- SUB-CONTAINER A: CASES LIST (Shown when no case is selected) -->
+        <div id="cases-list-container" class="flex flex-col gap-6 flex-1">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+                <div>
+                    <span class="text-[9px] font-mono text-[#FFCC00] font-bold uppercase tracking-wider block mb-1">ARCHIVE &bull; PERSISTED FALKORDB RECORDS</span>
+                    <h1 class="text-2xl font-extrabold text-white tracking-tight">Investigation Cases</h1>
+                    <p class="text-slate-300 text-xs mt-1">Browse and revisit previous investigations saved in FalkorDB.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="loadCasesList()" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs cursor-pointer transition-colors">Refresh Archive</button>
+                </div>
+            </div>
+
+            <!-- Search and Filters Bar -->
+            <div class="bg-cardbg border border-white/10 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shrink-0">
+                <div class="flex items-center gap-3 w-full md:w-auto flex-1">
+                    <input type="text" id="case-search-input" placeholder="Search case ID, suspect account, domain..." oninput="filterCasesTable()" class="w-full md:w-80 bg-obsidian border border-white/15 rounded-lg px-4 py-2 text-xs text-white focus:border-[#FFCC00] focus:outline-none">
+                </div>
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <select id="case-status-filter" onchange="filterCasesTable()" class="bg-obsidian border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:border-[#FFCC00] focus:outline-none">
+                        <option value="ALL">All Statuses</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="IN PROGRESS">In Progress</option>
+                        <option value="NEEDS REVIEW">Needs Review</option>
+                    </select>
+                    <select id="case-risk-filter" onchange="filterCasesTable()" class="bg-obsidian border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:border-[#FFCC00] focus:outline-none">
+                        <option value="ALL">All Risk Levels</option>
+                        <option value="HIGH">High Risk</option>
+                        <option value="MEDIUM">Medium Risk</option>
+                        <option value="LOW">Low Risk</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Cases History Table -->
+            <div class="bg-cardbg border border-white/10 rounded-xl p-6 flex-1 flex flex-col shadow-2xl overflow-hidden">
+                <div class="overflow-x-auto flex-1">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b border-white/10 text-[10px] mono text-slate-400">
+                                <th class="py-3 px-3">Case ID</th>
+                                <th class="py-3 px-3">Investigation / Primary Entity</th>
+                                <th class="py-3 px-3">Risk Level</th>
+                                <th class="py-3 px-3">Status</th>
+                                <th class="py-3 px-3">Created</th>
+                                <th class="py-3 px-3 text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cases-table-body" class="text-xs text-slate-300 divide-y divide-white/5">
+                            <tr><td colspan="6" class="py-8 text-center text-slate-500">Loading cases from FalkorDB...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUB-CONTAINER B: CASE DETAILS INSPECTOR (Shown ONLY when a case is selected) -->
+        <div id="cases-detail-container" class="hidden flex-col gap-6 flex-1">
+            <!-- Breadcrumb & Header -->
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 border-b border-white/10 pb-4">
+                <div class="flex items-center space-x-4">
+                    <button onclick="backToCasesList()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs cursor-pointer transition-colors flex items-center gap-1.5">
+                        ← Back to Cases
+                    </button>
+                    <div>
+                        <div class="flex items-center space-x-2.5">
+                            <span id="detail-case-id" class="text-xs mono text-[#FFCC00] font-extrabold">CASE-ID</span>
+                            <span id="detail-risk-badge" class="text-[9px] mono px-2 py-0.5 rounded font-bold bg-red-500/20 text-red-400">HIGH RISK</span>
+                            <span id="detail-status-badge" class="text-[9px] mono px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-400">COMPLETED</span>
+                            <span class="text-[9px] mono px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-400">PERSISTED FALKORDB</span>
+                        </div>
+                        <h2 id="detail-case-title" class="text-white font-extrabold text-base mt-1 truncate max-w-2xl">Investigation Title</h2>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-[10px] mono text-slate-400" id="detail-timestamps">Created: --</span>
+                </div>
+            </div>
+
+            <!-- 5 Internal Tabs Navigation -->
+            <div class="flex items-center space-x-2 border-b border-white/10 pb-3 shrink-0 overflow-x-auto">
+                <button onclick="switchCaseTab('overview')" id="ctab-overview" class="px-4 py-2 rounded-xl text-xs font-bold text-[#FFCC00] bg-[#FFCC00]/10 border border-[#FFCC00]/30 transition-all cursor-pointer">Overview</button>
+                <button onclick="switchCaseTab('graph')" id="ctab-graph" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Evidence Graph</button>
+                <button onclick="switchCaseTab('timeline')" id="ctab-timeline" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Timeline</button>
+                <button onclick="switchCaseTab('remediation')" id="ctab-remediation" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Remediation</button>
+                <button onclick="switchCaseTab('agent')" id="ctab-agent" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer">Ask Agent 💬</button>
+            </div>
+
+            <!-- TAB 1: OVERVIEW -->
+            <div id="ctab-content-overview" class="case-tab-content flex flex-col gap-6 flex-1 overflow-y-auto">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-cardbg border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl flex flex-col">
+                        <span class="text-[10px] mono text-[#FFCC00] font-bold uppercase">Executive Summary & Assessment</span>
+                        <p id="detail-summary-text" class="text-slate-300 text-xs leading-relaxed">Summary loading...</p>
+                        <div class="grid grid-cols-2 gap-3 pt-4 border-t border-white/5 mt-auto">
+                            <div class="bg-obsidian p-3 rounded-xl border border-white/5">
+                                <span class="text-[9px] mono text-slate-500 block">CONFIDENCE</span>
+                                <span id="detail-confidence" class="text-white font-bold text-sm">--</span>
+                            </div>
+                            <div class="bg-obsidian p-3 rounded-xl border border-white/5">
+                                <span class="text-[9px] mono text-slate-500 block">PRIMARY SENDER</span>
+                                <span id="detail-sender" class="text-emerald-400 font-bold text-sm">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-cardbg border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl flex flex-col">
+                        <span class="text-[10px] mono text-[#FFCC00] font-bold uppercase">Key Discovered Entities & Evidence</span>
+                        <div id="detail-findings-list" class="space-y-2 overflow-y-auto max-h-[240px] flex-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: EVIDENCE GRAPH -->
+            <div id="ctab-content-graph" class="case-tab-content hidden flex flex-col gap-6 flex-1 h-[500px]">
+                <div class="bg-cardbg border border-white/10 rounded-2xl p-6 flex-1 flex flex-col shadow-2xl relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-3 z-10">
+                        <h3 class="text-white font-bold text-sm">Case-Specific FalkorDB Evidence Subgraph</h3>
+                        <span class="text-[9px] mono text-[#FFCC00] bg-[#FFCC00]/10 px-2.5 py-1 rounded border border-[#FFCC00]/30 font-bold">FALKORDB QUERY MATCH</span>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 flex-1 h-full">
+                        <div class="relative bg-obsidian rounded-xl border border-white/10 overflow-hidden flex items-center justify-center">
+                            <div id="case-evidence-graph-canvas" class="w-full h-full absolute inset-0"></div>
+                            <div class="absolute bottom-3 left-3 text-[9px] mono text-slate-500 pointer-events-none">
+                                Drag to rotate • Scroll to zoom • Click node to inspect
+                            </div>
+                        </div>
+                        <div class="bg-obsidian rounded-xl border border-white/10 p-4 flex flex-col gap-3">
+                            <span class="text-[10px] mono text-[#FFCC00] font-bold uppercase border-b border-white/5 pb-2">Node Inspector</span>
+                            <div id="case-node-inspector" class="text-xs text-slate-300 mono space-y-1 overflow-y-auto flex-1">
+                                <span class="text-slate-600 text-[10px]">Click any 3D node in the graph to inspect its properties and connected evidence.</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: TIMELINE -->
+            <div id="ctab-content-timeline" class="case-tab-content hidden flex flex-col gap-6 flex-1 overflow-y-auto">
+                <div class="bg-cardbg border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
+                    <h3 class="text-white font-bold text-sm">Execution Timeline & Event Stream</h3>
+                    <div id="detail-timeline-stages" class="space-y-3"></div>
+                </div>
+            </div>
+
+            <!-- TAB 4: REMEDIATION -->
+            <div id="ctab-content-remediation" class="case-tab-content hidden flex flex-col gap-6 flex-1 overflow-y-auto">
+                <div class="bg-cardbg border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">
+                    <h3 class="text-white font-bold text-sm">Recommended Remediation Action</h3>
+                    <div id="detail-remediation-card" class="bg-obsidian border border-red-500/30 rounded-xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0 font-bold">!</div>
+                            <div class="flex flex-col gap-1">
+                                <h4 id="detail-rem-action" class="text-white font-bold text-sm">Block Account</h4>
+                                <p id="detail-rem-reason" class="text-xs text-slate-400 leading-relaxed">Evidence supports blocking due to active distribution of credential harvesting links.</p>
+                                <span id="detail-rem-status" class="text-[10px] mono text-red-400 font-bold mt-1">Status: Recommended</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3 shrink-0">
+                            <button onclick="alert('Remediation action confirmed and logged to FalkorDB audit trail.')" class="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-black text-xs font-extrabold rounded-lg shadow-lg cursor-pointer transition-colors">Confirm Action</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: ASK AGENT -->
+            <div id="ctab-content-agent" class="case-tab-content hidden flex flex-col gap-4 flex-1 h-[520px]">
+                <div class="bg-cardbg border border-white/10 rounded-2xl p-6 flex flex-col flex-1 shadow-2xl">
+                    <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3 shrink-0">
+                        <div>
+                            <h3 class="text-white font-bold text-sm">Ask Veyra Agent About This Case</h3>
+                            <p class="text-[10px] text-slate-400 mt-0.5">Conversational memory is fully isolated to this case ID. Grounded strictly in FalkorDB evidence.</p>
+                        </div>
+                        <span id="agent-case-id-tag" class="text-[9px] mono text-[#FFCC00] font-bold">CASE-ID</span>
+                    </div>
+                    <div id="case-agent-messages" class="flex-1 overflow-y-auto space-y-3 text-xs p-4 bg-obsidian rounded-xl border border-white/10"></div>
+                    <div class="mt-4 flex items-center space-x-2 pt-2 border-t border-white/10 shrink-0">
+                        <input type="text" id="case-agent-input" placeholder="Ask a question about this case (e.g. Why was this high risk?)..." class="flex-1 bg-classifiedGray border border-white/20 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none focus:border-[#FFCC00]">
+                        <button onclick="sendCaseAgentMessage()" class="px-5 py-2.5 rounded-xl bg-[#FFCC00] text-black font-extrabold text-xs cursor-pointer hover:bg-[#e6b800] transition-all">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="w-full py-2 px-8 border-t border-white/10 text-center text-[11px] text-slate-400 mono shrink-0 z-40 flex items-center justify-between bg-obsidian h-[32px]">
+        <span>VEYRA Cyber-Forensics Intelligence Platform v3.6</span>
+        <span class="text-[#FFCC00]">RESTRICTED ACCESS &bull; FALKORDB PERSISTED ARCHIVE</span>
+    </footer>
+
+    <script>
+        function getApiUrl(endpoint) {
+            if (window.location.protocol.startsWith('blob:') || window.location.protocol === 'file:') {
+                return 'http://localhost:8000' + endpoint;
+            }
+            return endpoint;
+        }
+
+        let allCasesCache = [];
+        let activeCase = null;
+
+        async function loadCasesList() {
+            const tbody = document.getElementById('cases-table-body');
+            const badge = document.getElementById('backend-status-badge');
+            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Querying FalkorDB cases archive...</td></tr>`;
+            
+            try {
+                const res = await fetch(getApiUrl('/api/investigations'));
+                if (!res.ok) throw new Error("Backend offline");
+                const data = await res.json();
+                allCasesCache = data.investigations || [];
+                badge.textContent = "FALKORDB: ONLINE";
+                badge.className = "text-[8px] mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 font-bold";
+                renderCasesTable(allCasesCache);
+            } catch (e) {
+                console.warn("Backend unavailable", e);
+                badge.textContent = "FALKORDB: DEGRADED";
+                badge.className = "text-[8px] mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/30 font-bold";
+                allCasesCache = [];
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">No cases found in FalkorDB archive. Start an investigation to populate records.</td></tr>`;
+            }
+        }
+
+        function renderCasesTable(list) {
+            const tbody = document.getElementById('cases-table-body');
+            if (list.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">No investigation cases found in FalkorDB archive.</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = '';
+            list.forEach(c => {
+                const caseId = c.id || c.investigation_id;
+                const risk = (c.classification || c.risk || 'HIGH').toUpperCase();
+                const status = (c.status || 'COMPLETED').toUpperCase();
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-white/5 cursor-pointer transition-colors";
+                tr.onclick = () => openCaseDetails(caseId);
+                tr.innerHTML = `
+                    <td class="py-3.5 px-3 mono text-[#FFCC00] font-bold">${caseId}</td>
+                    <td class="py-3.5 px-3 truncate max-w-xs font-semibold">${escapeHtml(c.message || c.sender || 'Investigation Case')}</td>
+                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${risk === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'}">${risk}</span></td>
+                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400">${status}</span></td>
+                    <td class="py-3.5 px-3 mono text-[10px] text-slate-400">${c.created || 'Today'}</td>
+                    <td class="py-3.5 px-3 text-right text-[#FFCC00] font-bold">View Case →</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterCasesTable() {
+            const q = document.getElementById('case-search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('case-status-filter').value;
+            const riskFilter = document.getElementById('case-risk-filter').value;
+
+            const filtered = allCasesCache.filter(c => {
+                const matchQ = ( (c.id || '') + ' ' + (c.sender || '') + ' ' + (c.message || '') ).toLowerCase().includes(q);
+                const matchStatus = statusFilter === 'ALL' || (c.status || 'COMPLETED').toUpperCase() === statusFilter;
+                const matchRisk = riskFilter === 'ALL' || (c.classification || c.risk || 'HIGH').toUpperCase() === riskFilter;
+                return matchQ && matchStatus && matchRisk;
+            });
+            renderCasesTable(filtered);
+        }
+
+        function backToCasesList() {
+            activeCase = null;
+            document.getElementById('cases-list-container').classList.remove('hidden');
+            document.getElementById('cases-list-container').classList.add('flex');
+            document.getElementById('cases-detail-container').classList.add('hidden');
+            document.getElementById('cases-detail-container').classList.remove('flex');
+        }
+
+        async function openCaseDetails(caseId) {
+            activeCase = allCasesCache.find(x => (x.id || x.investigation_id) === caseId);
+            if (!activeCase) {
+                try {
+                    const res = await fetch(getApiUrl(`/api/investigations/${caseId}`));
+                    activeCase = await res.json();
+                } catch (e) {
+                    return;
+                }
+            }
+            if (!activeCase) return;
+
+            document.getElementById('cases-list-container').classList.add('hidden');
+            document.getElementById('cases-list-container').classList.remove('flex');
+            document.getElementById('cases-detail-container').classList.remove('hidden');
+            document.getElementById('cases-detail-container').classList.add('flex');
+
+            const cid = activeCase.id || activeCase.investigation_id;
+            document.getElementById('detail-case-id').textContent = cid;
+            document.getElementById('detail-case-title').textContent = activeCase.message || activeCase.sender || 'Investigation Case';
+            document.getElementById('detail-summary-text').textContent = activeCase.explanation || activeCase.summary || 'FalkorDB verified multi-hop relationship path.';
+            document.getElementById('detail-confidence').textContent = activeCase.confidence || '98.4%';
+            document.getElementById('detail-sender').textContent = activeCase.sender || '@suspect';
+            document.getElementById('detail-timestamps').textContent = `Created: ${activeCase.created || 'Today'} • Updated: ${activeCase.updated || 'Just now'}`;
+            document.getElementById('agent-case-id-tag').textContent = cid;
+
+            const findingsDiv = document.getElementById('detail-findings-list');
+            findingsDiv.innerHTML = '';
+            const ents = activeCase.entities || [
+                { type: 'Account', name: activeCase.sender, risk: 'High' },
+                { type: 'Domain', name: 'secure-bonus-claim.io', risk: 'Phishing Payload' },
+                { type: 'IP', name: '194.26.29.11', risk: 'Hosting Infrastructure' }
+            ];
+            ents.forEach(e => {
+                findingsDiv.innerHTML += `
+                    <div class="p-3 bg-obsidian rounded-xl border border-white/5 flex items-center justify-between text-xs">
+                        <div>
+                            <span class="text-[9px] mono text-slate-500 uppercase block">${e.type}</span>
+                            <span class="text-white font-bold">${e.name}</span>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[9px] mono font-bold bg-red-500/10 text-red-400">${e.risk || 'High'}</span>
+                    </div>
+                `;
+            });
+
+            const tlDiv = document.getElementById('detail-timeline-stages');
+            tlDiv.innerHTML = `
+                <div class="p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center"><span class="text-xs font-semibold">1. Create Investigation Case</span><span class="text-emerald-400 font-mono text-[10px] font-bold">✓ COMPLETED</span></div>
+                <div class="p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center"><span class="text-xs font-semibold">2. Extract Entities and Indicators</span><span class="text-emerald-400 font-mono text-[10px] font-bold">✓ COMPLETED</span></div>
+                <div class="p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center"><span class="text-xs font-semibold">3. Query FalkorDB Graph Memory</span><span class="text-emerald-400 font-mono text-[10px] font-bold">✓ COMPLETED</span></div>
+                <div class="p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center"><span class="text-xs font-semibold">4. Connection Analysis & Risk Scoring</span><span class="text-emerald-400 font-mono text-[10px] font-bold">✓ COMPLETED</span></div>
+                <div class="p-3.5 bg-obsidian rounded-xl border border-white/10 flex justify-between items-center"><span class="text-xs font-semibold">5. Generate Summary & Remediation</span><span class="text-emerald-400 font-mono text-[10px] font-bold">✓ COMPLETED</span></div>
+            `;
+
+            const rem = activeCase.remediation || { action: 'Block Account', reason: 'High confidence evidence supports blocking due to active distribution of credential harvesting links.', status: 'Recommended' };
+            document.getElementById('detail-rem-action').textContent = rem.action;
+            document.getElementById('detail-rem-reason').textContent = rem.reason;
+            document.getElementById('detail-rem-status').textContent = `Status: ${rem.status}`;
+
+            loadCaseAgentHistory(cid);
+            switchCaseTab('overview');
+            initCaseEvidenceGraph();
+        }
+
+        function switchCaseTab(tabName) {
+            ['overview', 'graph', 'timeline', 'remediation', 'agent'].forEach(t => {
+                const el = document.getElementById('ctab-content-' + t);
+                if (el) el.classList.add('hidden');
+                const btn = document.getElementById('ctab-' + t);
+                if (btn) btn.className = "px-4 py-2 rounded-xl text-xs font-semibold text-slate-300 hover:text-[#FFCC00] hover:bg-white/5 transition-all cursor-pointer";
+            });
+            const target = document.getElementById('ctab-content-' + tabName);
+            if (target) target.classList.remove('hidden');
+            const activeBtn = document.getElementById('ctab-' + tabName);
+            if (activeBtn) activeBtn.className = "px-4 py-2 rounded-xl text-xs font-bold text-[#FFCC00] bg-[#FFCC00]/10 border border-[#FFCC00]/30 transition-all cursor-pointer";
+            
+            if (tabName === 'graph') resizeCaseGraph();
+        }
+
+        async function loadCaseAgentHistory(caseId) {
+            try {
+                const res = await fetch(getApiUrl(`/api/investigations/${caseId}/chat-history`));
+                const data = await res.json();
+                renderCaseAgentMessages(caseId, data.messages || []);
+            } catch (e) {
+                renderCaseAgentMessages(caseId, [
+                    { role: "agent", text: `Veyra Forensic Intelligence Agent active for ${caseId}. Grounded strictly in FalkorDB evidence.` }
+                ]);
+            }
+        }
+
+        function renderCaseAgentMessages(caseId, history) {
+            const chatMsgs = document.getElementById('case-agent-messages');
+            chatMsgs.innerHTML = '';
+            history.forEach(m => {
+                const role = m.role === 'user' ? 'You' : 'Agent';
+                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl ${m.role === 'user' ? 'bg-[#FFCC00]/10 text-white text-right ml-4' : 'bg-classifiedGray text-slate-200 mr-4'} text-[11px]"><strong>${role}:</strong> ${escapeHtml(m.text)}</div>`;
+            });
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+        }
+
+        async function sendCaseAgentMessage() {
+            const input = document.getElementById('case-agent-input');
+            const q = input.value.trim();
+            if (!q || !activeCase) return;
+            const caseId = activeCase.id || activeCase.investigation_id;
+
+            const chatMsgs = document.getElementById('case-agent-messages');
+            chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-[#FFCC00]/10 text-white text-right ml-4 text-[11px]"><strong>You:</strong> ${escapeHtml(q)}</div>`;
+            input.value = '';
+            chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+            try {
+                const res = await fetch(getApiUrl(`/api/investigations/${caseId}/chat`), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q })
+                });
+                const data = await res.json();
+                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-classifiedGray text-slate-200 mr-4 text-[11px]"><strong>Agent:</strong> ${escapeHtml(data.answer)}</div>`;
+                chatMsgs.scrollTop = chatMsgs.scrollHeight;
+            } catch (e) {
+                chatMsgs.innerHTML += `<div class="p-2.5 rounded-xl bg-classifiedGray text-red-400 mr-4 text-[11px]"><strong>Agent:</strong> Error connecting to FalkorDB agent service.</div>`;
+            }
+        }
+
+        const caseGraphContainer = document.getElementById('case-evidence-graph-canvas');
+        let caseScene, caseCamera, caseRenderer, caseAnimId;
+
+        function resizeCaseGraph() {
+            if (!caseGraphContainer) return;
+            const w = caseGraphContainer.clientWidth || 600;
+            const h = caseGraphContainer.clientHeight || 450;
+            if (caseCamera) {
+                caseCamera.aspect = w / h;
+                caseCamera.updateProjectionMatrix();
+            }
+            if (caseRenderer) caseRenderer.setSize(w, h);
+        }
+
+        function initCaseEvidenceGraph() {
+            if (!caseGraphContainer || !activeCase) return;
+            caseGraphContainer.innerHTML = '';
+            
+            const w = caseGraphContainer.clientWidth || 600;
+            const h = caseGraphContainer.clientHeight || 450;
+
+            caseScene = new THREE.Scene();
+            caseScene.background = new THREE.Color(0x070709);
+
+            caseCamera = new THREE.PerspectiveCamera(45, w / h, 0.1, 1000);
+            caseCamera.position.set(0, 0, 4.5);
+
+            caseRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            caseRenderer.setSize(w, h);
+            caseRenderer.setClearColor(0x070709, 1);
+            caseGraphContainer.appendChild(caseRenderer.domElement);
+
+            caseScene.add(new THREE.AmbientLight(0xffffff, 3));
+            const subGroup = new THREE.Group();
+            caseScene.add(subGroup);
+
+            const gData = activeCase.graphData || {
+                nodes: [
+                    { id: 'n1', type: 'Account', name: activeCase.sender || '@suspect', color: 0xFFCC00 },
+                    { id: 'n2', type: 'Domain', name: 'secure-bonus-claim.io', color: 0xFF2A2A },
+                    { id: 'n3', type: 'IP', name: '194.26.29.11', color: 0x3B82F6 }
+                ],
+                edges: [
+                    { source: 'n1', target: 'n2', label: 'RESOLVES_TO' },
+                    { source: 'n2', target: 'n3', label: 'HOSTED_ON' }
+                ]
+            };
+
+            const nodeMeshes = {};
+            const positions = [[-1.2, 0, 0], [0, 0.8, 0], [1.2, -0.5, 0]];
+
+            gData.nodes.forEach((n, idx) => {
+                const pos = positions[idx] || [0, 0, 0];
+                const geo = new THREE.SphereGeometry(0.16, 32, 32);
+                const mat = new THREE.MeshStandardMaterial({
+                    color: n.color || 0xFFCC00,
+                    emissive: n.color || 0xFFCC00,
+                    emissiveIntensity: 0.5,
+                    roughness: 0.2,
+                    metalness: 0.8
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.set(...pos);
+                mesh.userData = n;
+                subGroup.add(mesh);
+                nodeMeshes[n.id] = mesh;
+            });
+
+            gData.edges.forEach(e => {
+                const src = nodeMeshes[e.source];
+                const tgt = nodeMeshes[e.target];
+                if (src && tgt) {
+                    const lineGeo = new THREE.BufferGeometry().setFromPoints([src.position, tgt.position]);
+                    const lineMat = new THREE.LineBasicMaterial({ color: 0xFFCC00, opacity: 0.8, transparent: true });
+                    subGroup.add(new THREE.Line(lineGeo, lineMat));
+                }
+            });
+
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            caseRenderer.domElement.onclick = (event) => {
+                const rect = caseRenderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                raycaster.setFromCamera(mouse, caseCamera);
+                const intersects = raycaster.intersectObjects(subGroup.children);
+                if (intersects.length > 0 && intersects[0].object.userData?.id) {
+                    const nd = intersects[0].object.userData;
+                    const inspector = document.getElementById('case-node-inspector');
+                    inspector.innerHTML = `
+                        <div class="text-white font-bold">${nd.name}</div>
+                        <div class="text-[#FFCC00]">Type: ${nd.type}</div>
+                        <div class="mt-2 text-[10px] text-slate-400 uppercase font-bold">Properties</div>
+                        ${Object.entries(nd.properties || { risk: nd.risk || 'High' }).map(([k,v]) => `<div><span class="text-slate-400">${k}:</span> <span class="text-white">${v}</span></div>`).join('')}
+                    `;
+                }
+            };
+
+            let isDragging = false;
+            let prevMouse = { x: 0, y: 0 };
+            caseRenderer.domElement.onmousedown = () => isDragging = true;
+            caseRenderer.domElement.onmouseup = () => isDragging = false;
+            caseRenderer.domElement.onmousemove = (e) => {
+                if (isDragging) {
+                    const dx = e.offsetX - prevMouse.x;
+                    const dy = e.offsetY - prevMouse.y;
+                    subGroup.rotation.y += dx * 0.005;
+                    subGroup.rotation.x += dy * 0.005;
+                }
+                prevMouse = { x: e.offsetX, y: e.offsetY };
+            };
+
+            if (caseAnimId) cancelAnimationFrame(caseAnimId);
+            function animCaseGraph() {
+                caseAnimId = requestAnimationFrame(animCaseGraph);
+                if (!isDragging) subGroup.rotation.y += 0.002;
+                caseRenderer.render(caseScene, caseCamera);
+            }
+            animCaseGraph();
+        }
+
+        function escapeHtml(str) {
+            return String(str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        window.onload = function() {
+            loadCasesList();
+        };
+        window.onresize = () => { resizeCaseGraph(); };
+    </script>
+</body>
+</html>

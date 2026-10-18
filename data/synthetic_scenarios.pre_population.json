@@ -1,0 +1,1414 @@
+{
+  "schema_version": "1.0.0",
+  "dataset_id": "veyra_synthetic_social_investigations_v1",
+  "dataset_name": "Veyra Platform-Neutral Synthetic Investigation Dataset",
+  "is_synthetic": true,
+  "usage_note": "All entities and observations are fictional. .example domains are reserved for examples. This dataset is for development and demos, not real-world accusations.",
+  "platforms": [
+    {
+      "id": "platform_demosocial",
+      "name": "DemoSocial",
+      "platform_type": "social_network"
+    },
+    {
+      "id": "platform_demochat",
+      "name": "DemoChat",
+      "platform_type": "messaging_service"
+    },
+    {
+      "id": "platform_demovideo",
+      "name": "DemoVideo",
+      "platform_type": "video_sharing"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "scenario_001",
+      "name": "Connected promotional network",
+      "description": "Fictional accounts share a domain, payment reference and duplicated promotional content.",
+      "expected_outcome": "needs_review",
+      "primary_account_id": "acct_001"
+    },
+    {
+      "id": "scenario_002",
+      "name": "Consistent legitimate-style business",
+      "description": "Fictional shop and support accounts have consistent business links and no strong adverse evidence in this dataset.",
+      "expected_outcome": "no_conclusive_concern",
+      "primary_account_id": "acct_006"
+    },
+    {
+      "id": "scenario_003",
+      "name": "Possible brand impersonation",
+      "description": "A fictional account resembles a fictional reference brand and requires human verification.",
+      "expected_outcome": "needs_review",
+      "primary_account_id": "acct_010"
+    },
+    {
+      "id": "scenario_004",
+      "name": "Insufficient evidence",
+      "description": "Fictional personal accounts have too little evidence for a reliable conclusion.",
+      "expected_outcome": "insufficient_evidence",
+      "primary_account_id": "acct_012"
+    }
+  ],
+  "accounts": [
+    {
+      "id": "acct_001",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_001",
+      "username": "luma_glow_store",
+      "display_name": "Luma Glow Store",
+      "bio": "Your daily glow essentials. Beauty and skincare offers.",
+      "profile_image": "/avatars/luma-glow-store.svg",
+      "followers": 12800,
+      "following": 412,
+      "post_count": 46,
+      "verified": false,
+      "account_created_at": "2026-06-12",
+      "account_status": "under_review",
+      "profile_url": "https://demosocial.example/@luma_glow_store",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_002",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_002",
+      "username": "luma_glow_deals",
+      "display_name": "Luma Glow Deals",
+      "bio": "Flash sales. Message us for order details.",
+      "profile_image": "/avatars/luma-glow-deals.svg",
+      "followers": 3200,
+      "following": 180,
+      "post_count": 18,
+      "verified": false,
+      "account_created_at": "2026-07-03",
+      "account_status": "under_review",
+      "profile_url": "https://demosocial.example/@luma_glow_deals",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_003",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demochat",
+      "platform_account_id": "demo_user_003",
+      "username": "luma_helpdesk",
+      "display_name": "Luma Helpdesk",
+      "bio": "Order assistance and refund support.",
+      "profile_image": "/avatars/luma-helpdesk.svg",
+      "followers": 840,
+      "following": 65,
+      "post_count": 9,
+      "verified": false,
+      "account_created_at": "2026-07-09",
+      "account_status": "under_review",
+      "profile_url": "https://demochat.example/@luma_helpdesk",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_004",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_004",
+      "username": "luma_flash_rewards",
+      "display_name": "Luma Flash Rewards",
+      "bio": "Exclusive rewards and limited-time deals.",
+      "profile_image": "/avatars/luma-flash-rewards.svg",
+      "followers": 5400,
+      "following": 260,
+      "post_count": 27,
+      "verified": false,
+      "account_created_at": "2026-07-10",
+      "account_status": "under_review",
+      "profile_url": "https://demosocial.example/@luma_flash_rewards",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_005",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demochat",
+      "platform_account_id": "demo_user_005",
+      "username": "luma_customer_care",
+      "display_name": "Luma Customer Care",
+      "bio": "Customer queries and order updates.",
+      "profile_image": "/avatars/luma-customer-care.svg",
+      "followers": 620,
+      "following": 90,
+      "post_count": 7,
+      "verified": false,
+      "account_created_at": "2026-07-11",
+      "account_status": "under_review",
+      "profile_url": "https://demochat.example/@luma_customer_care",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_015",
+      "scenario_id": "scenario_001",
+      "platform_id": "platform_demovideo",
+      "platform_account_id": "demo_user_015",
+      "username": "luma_vip_offers",
+      "display_name": "Luma VIP Offers",
+      "bio": "Member-only skincare offers and rewards.",
+      "profile_image": "/avatars/luma-vip-offers.svg",
+      "followers": 2100,
+      "following": 145,
+      "post_count": 16,
+      "verified": false,
+      "account_created_at": "2026-07-13",
+      "account_status": "under_review",
+      "profile_url": "https://demovideo.example/@luma_vip_offers",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_006",
+      "scenario_id": "scenario_002",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_006",
+      "username": "earthkind_market",
+      "display_name": "Earthkind Market",
+      "bio": "Everyday essentials from independent makers.",
+      "profile_image": "/avatars/earthkind-market.svg",
+      "followers": 8600,
+      "following": 710,
+      "post_count": 125,
+      "verified": true,
+      "account_created_at": "2024-03-14",
+      "account_status": "no_conclusive_concern",
+      "profile_url": "https://demosocial.example/@earthkind_market",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_007",
+      "scenario_id": "scenario_002",
+      "platform_id": "platform_demochat",
+      "platform_account_id": "demo_user_007",
+      "username": "earthkind_support",
+      "display_name": "Earthkind Support",
+      "bio": "Help with orders, shipping and returns.",
+      "profile_image": "/avatars/earthkind-support.svg",
+      "followers": 1200,
+      "following": 230,
+      "post_count": 36,
+      "verified": false,
+      "account_created_at": "2025-01-08",
+      "account_status": "no_conclusive_concern",
+      "profile_url": "https://demochat.example/@earthkind_support",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_008",
+      "scenario_id": "scenario_002",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_008",
+      "username": "earthkind_makers",
+      "display_name": "Earthkind Makers",
+      "bio": "Meet the makers behind our products.",
+      "profile_image": "/avatars/earthkind-makers.svg",
+      "followers": 4100,
+      "following": 380,
+      "post_count": 92,
+      "verified": false,
+      "account_created_at": "2024-09-21",
+      "account_status": "no_conclusive_concern",
+      "profile_url": "https://demosocial.example/@earthkind_makers",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_014",
+      "scenario_id": "scenario_002",
+      "platform_id": "platform_demochat",
+      "platform_account_id": "demo_user_014",
+      "username": "earthkind_shipping",
+      "display_name": "Earthkind Shipping",
+      "bio": "Shipping notifications for demo orders.",
+      "profile_image": "/avatars/earthkind-shipping.svg",
+      "followers": 540,
+      "following": 110,
+      "post_count": 8,
+      "verified": false,
+      "account_created_at": "2025-06-18",
+      "account_status": "no_conclusive_concern",
+      "profile_url": "https://demochat.example/@earthkind_shipping",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_009",
+      "scenario_id": "scenario_003",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_009",
+      "username": "nordvale_official",
+      "display_name": "Nordvale Official",
+      "bio": "Official Nordvale collections.",
+      "profile_image": "/avatars/nordvale-official.svg",
+      "followers": 22500,
+      "following": 510,
+      "post_count": 160,
+      "verified": true,
+      "account_created_at": "2023-05-17",
+      "account_status": "reference_account",
+      "profile_url": "https://demosocial.example/@nordvale_official",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_010",
+      "scenario_id": "scenario_003",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_010",
+      "username": "nordvale_clearance",
+      "display_name": "Nordvale Clearance",
+      "bio": "Special clearance offers. Limited stock.",
+      "profile_image": "/avatars/nordvale-clearance.svg",
+      "followers": 7800,
+      "following": 340,
+      "post_count": 31,
+      "verified": false,
+      "account_created_at": "2026-08-01",
+      "account_status": "under_review",
+      "profile_url": "https://demosocial.example/@nordvale_clearance",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_011",
+      "scenario_id": "scenario_003",
+      "platform_id": "platform_demochat",
+      "platform_account_id": "demo_user_011",
+      "username": "nordvale_deals_chat",
+      "display_name": "Nordvale Deals Chat",
+      "bio": "Questions about special offers.",
+      "profile_image": "/avatars/nordvale-deals-chat.svg",
+      "followers": 930,
+      "following": 105,
+      "post_count": 12,
+      "verified": false,
+      "account_created_at": "2026-08-04",
+      "account_status": "under_review",
+      "profile_url": "https://demochat.example/@nordvale_deals_chat",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_012",
+      "scenario_id": "scenario_004",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_012",
+      "username": "mira_daily_notes",
+      "display_name": "Mira's Daily Notes",
+      "bio": "Lifestyle, books and everyday moments.",
+      "profile_image": "/avatars/mira-daily-notes.svg",
+      "followers": 470,
+      "following": 620,
+      "post_count": 22,
+      "verified": false,
+      "account_created_at": "2025-11-02",
+      "account_status": "insufficient_evidence",
+      "profile_url": "https://demosocial.example/@mira_daily_notes",
+      "is_synthetic": true
+    },
+    {
+      "id": "acct_013",
+      "scenario_id": "scenario_004",
+      "platform_id": "platform_demosocial",
+      "platform_account_id": "demo_user_013",
+      "username": "mira_links",
+      "display_name": "Mira Links",
+      "bio": "A collection of my favourite reads.",
+      "profile_image": "/avatars/mira-links.svg",
+      "followers": 190,
+      "following": 240,
+      "post_count": 11,
+      "verified": false,
+      "account_created_at": "2026-02-19",
+      "account_status": "insufficient_evidence",
+      "profile_url": "https://demosocial.example/@mira_links",
+      "is_synthetic": true
+    }
+  ],
+  "domains": [
+    {
+      "id": "domain_001",
+      "scenario_id": "scenario_001",
+      "name": "lumaglow-offers.example",
+      "first_seen": "2026-07-10",
+      "is_synthetic": true
+    },
+    {
+      "id": "domain_002",
+      "scenario_id": "scenario_002",
+      "name": "earthkind.example",
+      "first_seen": "2024-03-14",
+      "is_synthetic": true
+    },
+    {
+      "id": "domain_003",
+      "scenario_id": "scenario_003",
+      "name": "nordvale-clearance.example",
+      "first_seen": "2026-08-01",
+      "is_synthetic": true
+    },
+    {
+      "id": "domain_004",
+      "scenario_id": "scenario_004",
+      "name": "mira-reading.example",
+      "first_seen": "2026-02-19",
+      "is_synthetic": true
+    }
+  ],
+  "brands": [
+    {
+      "id": "brand_001",
+      "scenario_id": "scenario_001",
+      "name": "Luma Glow",
+      "official_domain": "lumaglow.example",
+      "logo_image": "/brands/luma-glow.svg",
+      "is_synthetic": true
+    },
+    {
+      "id": "brand_002",
+      "scenario_id": "scenario_002",
+      "name": "Earthkind Market",
+      "official_domain": "earthkind.example",
+      "logo_image": "/brands/earthkind.svg",
+      "is_synthetic": true
+    },
+    {
+      "id": "brand_003",
+      "scenario_id": "scenario_003",
+      "name": "Nordvale",
+      "official_domain": "nordvale.example",
+      "logo_image": "/brands/nordvale.svg",
+      "is_synthetic": true
+    }
+  ],
+  "payment_identifiers": [
+    {
+      "id": "payment_001",
+      "scenario_id": "scenario_001",
+      "identifier_type": "synthetic_payment_reference",
+      "masked_value": "DEMO-****-4821",
+      "is_synthetic": true
+    },
+    {
+      "id": "payment_002",
+      "scenario_id": "scenario_002",
+      "identifier_type": "synthetic_merchant_reference",
+      "masked_value": "SHOP-****-1904",
+      "is_synthetic": true
+    },
+    {
+      "id": "payment_003",
+      "scenario_id": "scenario_003",
+      "identifier_type": "synthetic_payment_reference",
+      "masked_value": "SALE-****-7730",
+      "is_synthetic": true
+    }
+  ],
+  "posts": [
+    {
+      "id": "post_001",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_001",
+      "platform_id": "platform_demosocial",
+      "content_type": "product_promotion",
+      "caption": "Limited-time skincare offer!",
+      "content_hash": "synthetic_hash_luma_offer_shared",
+      "media_path": null,
+      "published_at": "2026-07-11",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_002",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_002",
+      "platform_id": "platform_demosocial",
+      "content_type": "product_promotion",
+      "caption": "Limited-time skincare offer!",
+      "content_hash": "synthetic_hash_luma_offer_shared",
+      "media_path": null,
+      "published_at": "2026-07-12",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_003",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_003",
+      "platform_id": "platform_demochat",
+      "content_type": "customer_support",
+      "caption": "Contact us for order assistance.",
+      "content_hash": "synthetic_hash_luma_support",
+      "media_path": null,
+      "published_at": "2026-07-12",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_004",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_004",
+      "platform_id": "platform_demosocial",
+      "content_type": "promotion",
+      "caption": "Rewards available for a limited time.",
+      "content_hash": "synthetic_hash_luma_rewards",
+      "media_path": null,
+      "published_at": "2026-07-13",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_005",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_015",
+      "platform_id": "platform_demovideo",
+      "content_type": "member_promotion",
+      "caption": "Member-only skincare offers.",
+      "content_hash": "synthetic_hash_luma_vip",
+      "media_path": null,
+      "published_at": "2026-07-14",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_006",
+      "scenario_id": "scenario_002",
+      "account_id": "acct_006",
+      "platform_id": "platform_demosocial",
+      "content_type": "product_catalogue",
+      "caption": "Discover products from independent makers.",
+      "content_hash": "synthetic_hash_earthkind_catalogue",
+      "media_path": null,
+      "published_at": "2026-07-10",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_007",
+      "scenario_id": "scenario_002",
+      "account_id": "acct_008",
+      "platform_id": "platform_demosocial",
+      "content_type": "maker_story",
+      "caption": "Meet the people behind our products.",
+      "content_hash": "synthetic_hash_earthkind_makers",
+      "media_path": null,
+      "published_at": "2026-07-11",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_008",
+      "scenario_id": "scenario_002",
+      "account_id": "acct_007",
+      "platform_id": "platform_demochat",
+      "content_type": "customer_support",
+      "caption": "Questions about shipping and returns? Contact support.",
+      "content_hash": "synthetic_hash_earthkind_support",
+      "media_path": null,
+      "published_at": "2026-07-12",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_009",
+      "scenario_id": "scenario_003",
+      "account_id": "acct_009",
+      "platform_id": "platform_demosocial",
+      "content_type": "brand_announcement",
+      "caption": "Introducing our seasonal collection.",
+      "content_hash": "synthetic_hash_nordvale_official",
+      "media_path": null,
+      "published_at": "2026-07-15",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_010",
+      "scenario_id": "scenario_003",
+      "account_id": "acct_010",
+      "platform_id": "platform_demosocial",
+      "content_type": "clearance_promotion",
+      "caption": "Special clearance offers. Limited stock.",
+      "content_hash": "synthetic_hash_nordvale_clearance",
+      "media_path": null,
+      "published_at": "2026-08-03",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_011",
+      "scenario_id": "scenario_003",
+      "account_id": "acct_011",
+      "platform_id": "platform_demochat",
+      "content_type": "customer_support",
+      "caption": "Ask us about current offers.",
+      "content_hash": "synthetic_hash_nordvale_chat",
+      "media_path": null,
+      "published_at": "2026-08-05",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_012",
+      "scenario_id": "scenario_004",
+      "account_id": "acct_012",
+      "platform_id": "platform_demosocial",
+      "content_type": "personal_post",
+      "caption": "Sharing a few books I enjoyed.",
+      "content_hash": "synthetic_hash_mira_books",
+      "media_path": null,
+      "published_at": "2026-08-02",
+      "is_synthetic": true
+    },
+    {
+      "id": "post_013",
+      "scenario_id": "scenario_004",
+      "account_id": "acct_013",
+      "platform_id": "platform_demosocial",
+      "content_type": "link_post",
+      "caption": "A collection of my favourite reads.",
+      "content_hash": "synthetic_hash_mira_links",
+      "media_path": null,
+      "published_at": "2026-08-03",
+      "is_synthetic": true
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence_001",
+      "scenario_id": "scenario_001",
+      "evidence_type": "shared_domain",
+      "description": "Five fictional promotional/support accounts reference the same synthetic domain.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_001",
+      "confidence": 0.99,
+      "observed_at": "2026-07-14",
+      "interpretation": "A shared domain is a lead for investigation, not proof of wrongdoing.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_002",
+      "scenario_id": "scenario_001",
+      "evidence_type": "matching_content",
+      "description": "Two fictional promotional posts share the same synthetic content hash.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_001",
+      "confidence": 0.95,
+      "observed_at": "2026-07-12",
+      "interpretation": "Matching content may indicate reuse or coordination; context is required.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_003",
+      "scenario_id": "scenario_001",
+      "evidence_type": "shared_payment_reference",
+      "description": "Three fictional accounts reference the same synthetic payment identifier.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_001",
+      "confidence": 0.9,
+      "observed_at": "2026-07-14",
+      "interpretation": "A shared identifier is a connection signal, not a verdict by itself.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_004",
+      "scenario_id": "scenario_001",
+      "evidence_type": "recent_account_creation",
+      "description": "Several connected demo accounts were created within a short period.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_001",
+      "confidence": 0.7,
+      "observed_at": "2026-07-14",
+      "interpretation": "Account age is contextual and not evidence of fraud on its own.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_005",
+      "scenario_id": "scenario_002",
+      "evidence_type": "consistent_business_identity",
+      "description": "Fictional shop and support profiles use consistent business identity and domain.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_002",
+      "confidence": 0.8,
+      "observed_at": "2026-07-15",
+      "interpretation": "Consistency is reassuring only within this synthetic dataset.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_006",
+      "scenario_id": "scenario_003",
+      "evidence_type": "similar_branding",
+      "description": "The fictional clearance profile resembles the fictional Nordvale reference brand.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_003",
+      "confidence": 0.75,
+      "observed_at": "2026-08-05",
+      "interpretation": "Similarity warrants review but does not establish impersonation.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_007",
+      "scenario_id": "scenario_003",
+      "evidence_type": "different_domain",
+      "description": "The fictional clearance profile uses a different domain from the reference brand.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_003",
+      "confidence": 0.95,
+      "observed_at": "2026-08-05",
+      "interpretation": "Different domains can warrant review; legitimate campaigns can use separate domains.",
+      "is_synthetic": true
+    },
+    {
+      "id": "evidence_008",
+      "scenario_id": "scenario_004",
+      "evidence_type": "insufficient_signals",
+      "description": "Available synthetic records do not establish a meaningful adverse connection.",
+      "source_type": "synthetic_dataset",
+      "source_ref": "scenario_004",
+      "confidence": 0.95,
+      "observed_at": "2026-08-06",
+      "interpretation": "Insufficient evidence does not mean an account is guaranteed safe.",
+      "is_synthetic": true
+    }
+  ],
+  "reports": [
+    {
+      "id": "report_001",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_002",
+      "report_type": "suspected_misleading_promotion",
+      "description": "Synthetic user report alleging a misleading promotion; unverified.",
+      "reported_at": "2026-07-14",
+      "status": "unverified",
+      "source_type": "synthetic_dataset",
+      "is_synthetic": true
+    },
+    {
+      "id": "report_002",
+      "scenario_id": "scenario_001",
+      "account_id": "acct_003",
+      "report_type": "support_affiliation_concern",
+      "description": "Synthetic user report questioning whether this support profile is associated with the shop.",
+      "reported_at": "2026-07-14",
+      "status": "unverified",
+      "source_type": "synthetic_dataset",
+      "is_synthetic": true
+    },
+    {
+      "id": "report_003",
+      "scenario_id": "scenario_003",
+      "account_id": "acct_010",
+      "report_type": "possible_brand_impersonation",
+      "description": "Synthetic report asking whether this clearance profile is affiliated with the reference brand.",
+      "reported_at": "2026-08-05",
+      "status": "unverified",
+      "source_type": "synthetic_dataset",
+      "is_synthetic": true
+    },
+    {
+      "id": "report_004",
+      "scenario_id": "scenario_004",
+      "account_id": "acct_012",
+      "report_type": "general_concern",
+      "description": "Synthetic report with no supporting details supplied.",
+      "reported_at": "2026-08-06",
+      "status": "insufficient_details",
+      "source_type": "synthetic_dataset",
+      "is_synthetic": true
+    }
+  ],
+  "relationships": [
+    {
+      "id": "rel_001",
+      "from": "acct_001",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_001"
+    },
+    {
+      "id": "rel_002",
+      "from": "acct_002",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_001"
+    },
+    {
+      "id": "rel_003",
+      "from": "acct_003",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_001"
+    },
+    {
+      "id": "rel_004",
+      "from": "acct_004",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_001"
+    },
+    {
+      "id": "rel_005",
+      "from": "acct_015",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_001"
+    },
+    {
+      "id": "rel_006",
+      "from": "acct_001",
+      "type": "USES_PAYMENT",
+      "to": "payment_001"
+    },
+    {
+      "id": "rel_007",
+      "from": "acct_002",
+      "type": "USES_PAYMENT",
+      "to": "payment_001"
+    },
+    {
+      "id": "rel_008",
+      "from": "acct_004",
+      "type": "USES_PAYMENT",
+      "to": "payment_001"
+    },
+    {
+      "id": "rel_009",
+      "from": "acct_006",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_002"
+    },
+    {
+      "id": "rel_010",
+      "from": "acct_007",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_002"
+    },
+    {
+      "id": "rel_011",
+      "from": "acct_008",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_002"
+    },
+    {
+      "id": "rel_012",
+      "from": "acct_014",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_002"
+    },
+    {
+      "id": "rel_013",
+      "from": "acct_006",
+      "type": "USES_PAYMENT",
+      "to": "payment_002"
+    },
+    {
+      "id": "rel_014",
+      "from": "acct_007",
+      "type": "USES_PAYMENT",
+      "to": "payment_002"
+    },
+    {
+      "id": "rel_015",
+      "from": "acct_010",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_003"
+    },
+    {
+      "id": "rel_016",
+      "from": "acct_010",
+      "type": "USES_PAYMENT",
+      "to": "payment_003"
+    },
+    {
+      "id": "rel_017",
+      "from": "acct_011",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_003"
+    },
+    {
+      "id": "rel_018",
+      "from": "acct_011",
+      "type": "USES_PAYMENT",
+      "to": "payment_003"
+    },
+    {
+      "id": "rel_019",
+      "from": "acct_012",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_004"
+    },
+    {
+      "id": "rel_020",
+      "from": "acct_013",
+      "type": "SHARES_DOMAIN",
+      "to": "domain_004"
+    },
+    {
+      "id": "rel_021",
+      "from": "acct_001",
+      "type": "PUBLISHED",
+      "to": "post_001"
+    },
+    {
+      "id": "rel_022",
+      "from": "acct_002",
+      "type": "PUBLISHED",
+      "to": "post_002"
+    },
+    {
+      "id": "rel_023",
+      "from": "acct_003",
+      "type": "PUBLISHED",
+      "to": "post_003"
+    },
+    {
+      "id": "rel_024",
+      "from": "acct_004",
+      "type": "PUBLISHED",
+      "to": "post_004"
+    },
+    {
+      "id": "rel_025",
+      "from": "acct_015",
+      "type": "PUBLISHED",
+      "to": "post_005"
+    },
+    {
+      "id": "rel_026",
+      "from": "acct_006",
+      "type": "PUBLISHED",
+      "to": "post_006"
+    },
+    {
+      "id": "rel_027",
+      "from": "acct_008",
+      "type": "PUBLISHED",
+      "to": "post_007"
+    },
+    {
+      "id": "rel_028",
+      "from": "acct_007",
+      "type": "PUBLISHED",
+      "to": "post_008"
+    },
+    {
+      "id": "rel_029",
+      "from": "acct_009",
+      "type": "PUBLISHED",
+      "to": "post_009"
+    },
+    {
+      "id": "rel_030",
+      "from": "acct_010",
+      "type": "PUBLISHED",
+      "to": "post_010"
+    },
+    {
+      "id": "rel_031",
+      "from": "acct_011",
+      "type": "PUBLISHED",
+      "to": "post_011"
+    },
+    {
+      "id": "rel_032",
+      "from": "acct_012",
+      "type": "PUBLISHED",
+      "to": "post_012"
+    },
+    {
+      "id": "rel_033",
+      "from": "acct_013",
+      "type": "PUBLISHED",
+      "to": "post_013"
+    },
+    {
+      "id": "rel_034",
+      "from": "post_001",
+      "type": "MATCHES_CONTENT",
+      "to": "post_002"
+    },
+    {
+      "id": "rel_035",
+      "from": "acct_009",
+      "type": "REFERENCES_BRAND",
+      "to": "brand_003"
+    },
+    {
+      "id": "rel_036",
+      "from": "acct_010",
+      "type": "POSSIBLE_IMPERSONATION_OF",
+      "to": "brand_003"
+    },
+    {
+      "id": "rel_037",
+      "from": "acct_001",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_038",
+      "from": "acct_002",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_039",
+      "from": "acct_003",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_040",
+      "from": "acct_004",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_041",
+      "from": "acct_015",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_042",
+      "from": "acct_001",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_002"
+    },
+    {
+      "id": "rel_043",
+      "from": "acct_002",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_002"
+    },
+    {
+      "id": "rel_044",
+      "from": "acct_001",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_003"
+    },
+    {
+      "id": "rel_045",
+      "from": "acct_002",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_003"
+    },
+    {
+      "id": "rel_046",
+      "from": "acct_004",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_003"
+    },
+    {
+      "id": "rel_047",
+      "from": "acct_001",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_004"
+    },
+    {
+      "id": "rel_048",
+      "from": "acct_002",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_004"
+    },
+    {
+      "id": "rel_049",
+      "from": "acct_004",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_004"
+    },
+    {
+      "id": "rel_050",
+      "from": "acct_006",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_005"
+    },
+    {
+      "id": "rel_051",
+      "from": "acct_007",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_005"
+    },
+    {
+      "id": "rel_052",
+      "from": "acct_008",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_005"
+    },
+    {
+      "id": "rel_053",
+      "from": "acct_014",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_005"
+    },
+    {
+      "id": "rel_054",
+      "from": "acct_010",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_006"
+    },
+    {
+      "id": "rel_055",
+      "from": "acct_010",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_007"
+    },
+    {
+      "id": "rel_056",
+      "from": "acct_012",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_008"
+    },
+    {
+      "id": "rel_057",
+      "from": "acct_013",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_008"
+    },
+    {
+      "id": "rel_058",
+      "from": "report_001",
+      "type": "REPORTS_ACCOUNT",
+      "to": "acct_002"
+    },
+    {
+      "id": "rel_059",
+      "from": "report_002",
+      "type": "REPORTS_ACCOUNT",
+      "to": "acct_003"
+    },
+    {
+      "id": "rel_060",
+      "from": "report_003",
+      "type": "REPORTS_ACCOUNT",
+      "to": "acct_010"
+    },
+    {
+      "id": "rel_061",
+      "from": "report_004",
+      "type": "REPORTS_ACCOUNT",
+      "to": "acct_012"
+    },
+    {
+      "id": "rel_062",
+      "from": "report_001",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_063",
+      "from": "report_002",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_001"
+    },
+    {
+      "id": "rel_064",
+      "from": "report_003",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_006"
+    },
+    {
+      "id": "rel_065",
+      "from": "report_004",
+      "type": "SUPPORTED_BY",
+      "to": "evidence_008"
+    },
+    {
+      "id": "rel_066",
+      "from": "acct_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_067",
+      "from": "acct_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_068",
+      "from": "acct_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_069",
+      "from": "acct_004",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_070",
+      "from": "acct_005",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_071",
+      "from": "acct_015",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_072",
+      "from": "acct_006",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_073",
+      "from": "acct_007",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_074",
+      "from": "acct_008",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_075",
+      "from": "acct_014",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_076",
+      "from": "acct_009",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_077",
+      "from": "acct_010",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_078",
+      "from": "acct_011",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_079",
+      "from": "acct_012",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_080",
+      "from": "acct_013",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_081",
+      "from": "domain_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_082",
+      "from": "domain_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_083",
+      "from": "domain_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_084",
+      "from": "domain_004",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_085",
+      "from": "brand_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_086",
+      "from": "brand_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_087",
+      "from": "brand_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_088",
+      "from": "payment_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_089",
+      "from": "payment_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_090",
+      "from": "payment_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_091",
+      "from": "post_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_092",
+      "from": "post_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_093",
+      "from": "post_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_094",
+      "from": "post_004",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_095",
+      "from": "post_005",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_096",
+      "from": "post_006",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_097",
+      "from": "post_007",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_098",
+      "from": "post_008",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_099",
+      "from": "post_009",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_100",
+      "from": "post_010",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_101",
+      "from": "post_011",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_102",
+      "from": "post_012",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_103",
+      "from": "post_013",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_104",
+      "from": "evidence_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_105",
+      "from": "evidence_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_106",
+      "from": "evidence_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_107",
+      "from": "evidence_004",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_108",
+      "from": "evidence_005",
+      "type": "IN_SCENARIO",
+      "to": "scenario_002"
+    },
+    {
+      "id": "rel_109",
+      "from": "evidence_006",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_110",
+      "from": "evidence_007",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_111",
+      "from": "evidence_008",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    },
+    {
+      "id": "rel_112",
+      "from": "report_001",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_113",
+      "from": "report_002",
+      "type": "IN_SCENARIO",
+      "to": "scenario_001"
+    },
+    {
+      "id": "rel_114",
+      "from": "report_003",
+      "type": "IN_SCENARIO",
+      "to": "scenario_003"
+    },
+    {
+      "id": "rel_115",
+      "from": "report_004",
+      "type": "IN_SCENARIO",
+      "to": "scenario_004"
+    }
+  ],
+  "investigation_policy": {
+    "allowed_outcomes": [
+      "needs_review",
+      "no_conclusive_concern",
+      "insufficient_evidence"
+    ],
+    "rules": [
+      "Never label an account fraudulent from one signal alone.",
+      "Distinguish observations from inferences.",
+      "Reports are unverified unless independently supported.",
+      "Every finding shown to a user must link to supporting evidence.",
+      "Evidence confidence is not a probability of guilt.",
+      "Human review is required before external action."
+    ]
+  }
+}

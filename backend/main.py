@@ -1,0 +1,797 @@
+import asyncio
+from pydantic import BaseModel, Field
+from agent.groq_agent import ask_veyra
+from agent.investigator import list_scenarios, investigate_scenario
+from agent.graph_traversal import traverse_graph
+from fastapi import FastAPI, HTTPException, Query
+from graph.connection import get_graph, check_connection, GRAPH_NAME
+from fastapi import BackgroundTasks
+from agent.message_pipeline import (
+    create_case,
+    investigate_case,
+    get_case,
+    list_cases,
+)
+
+app = FastAPI(title="Veyra API", version="0.1.0")
+
+
+@app.get("/")
+def home():
+    return {
+        "app": "Veyra",
+        "message": "Connected evidence intelligence",
+    }
+
+
+@app.get("/api/health")
+def health():
+    try:
+        result = check_connection()
+        return {
+            "status": "ok",
+            "database": "FalkorDB",
+            "graph": GRAPH_NAME,
+            "connection_test": result[0][0],
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"FalkorDB connection failed: {exc}",
+        )
+
+
+@app.get("/api/graph")
+def read_graph():
+    try:
+        graph = get_graph()
+
+        node_count_result = graph.query(
+            "MATCH (n) RETURN count(n) AS total_nodes"
+        )
+        relationship_count_result = graph.query(
+            "MATCH ()-[r]->() RETURN count(r) AS total_relationships"
+        )
+
+        total_node_count = node_count_result.result_set[0][0]
+        total_relationship_count = relationship_count_result.result_set[0][0]
+
+        nodes_result = graph.query(
+            """
+            MATCH (n)
+            RETURN id(n) AS node_id, labels(n) AS labels,
+                   properties(n) AS props
+            """
+        )
+
+        # Only endpoint IDs and relationship metadata are needed here.
+        # Full node properties are returned once in the nodes array.
+        edges_result = graph.query(
+            """
+            MATCH (a)-[r]->(b)
+            RETURN id(a) AS from_id, labels(a) AS from_labels,
+                   type(r) AS relationship,
+                   id(b) AS to_id, labels(b) AS to_labels
+            """
+        )
+
+        # Keep investigation history in FalkorDB and the case-detail API.
+        # Do not duplicate large serialized histories in the graph payload.
+        bulky_fields = {"progress_json", "graph_snapshot_json"}
+
+        nodes = [
+            {
+                "node_id": row[0],
+                "labels": row[1],
+                "properties": {
+                    key: value
+                    for key, value in (row[2] or {}).items()
+                    if key not in bulky_fields
+                },
+            }
+            for row in nodes_result.result_set
+        ]
+
+        edges = [
+            {
+                "from_id": row[0],
+                "from_labels": row[1],
+                "from": {"id": str(row[0])},
+                "relationship": row[2],
+                "to_id": row[3],
+                "to_labels": row[4],
+                "to": {"id": str(row[3])},
+            }
+            for row in edges_result.result_set
+        ]
+
+        return {
+            "graph": GRAPH_NAME,
+            "total_node_count": total_node_count,
+            "total_relationship_count": total_relationship_count,
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+            "nodes": nodes,
+            "edges": edges,
+        }
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not read graph: {exc}",
+        )
+
+
+
+class InvestigationGraphRequest(BaseModel):
+    entity_ids: list[str] = Field(min_length=1, max_length=100)
+
+
+@app.post("/api/graph/investigation")
+def read_investigation_graph(payload: InvestigationGraphRequest):
+    """Execute a read-only query for existing investigation entities."""
+    try:
+        ids = list(dict.fromkeys(
+            entity_id.strip()
+            for entity_id in payload.entity_ids
+            if entity_id and entity_id.strip()
+            and not entity_id.startswith("observed:")
+        ))
+
+        if not ids:
+            raise HTTPException(
+                status_code=400,
+                detail="No stored FalkorDB entity IDs were provided.",
+            )
+
+        graph = get_graph()
+        result = graph.query(
+            """
+            MATCH (n:Entity)
+            WHERE n.id IN $entity_ids
+            WITH collect(DISTINCT n) AS selected
+            UNWIND selected AS n
+            OPTIONAL MATCH (n)-[r]-(m:Entity)
+            RETURN DISTINCT
+                labels(n) AS node_labels,
+                properties(n) AS node_properties,
+                CASE WHEN r IS NULL THEN null ELSE type(r) END AS relationship,
+                CASE WHEN m IS NULL THEN null ELSE labels(m) END AS other_labels,
+                CASE WHEN m IS NULL THEN null ELSE properties(m) END AS other_properties
+            LIMIT 500
+            """,
+            {"entity_ids": ids},
+        )
+
+        nodes = {}
+        edges = {}
+
+        for row in result.result_set:
+            labels, props, rel, other_labels, other_props = row
+            props = props or {}
+            node_id = str(props.get("id", ""))
+            if node_id:
+                nodes[node_id] = {
+                    "id": node_id,
+                    "labels": labels or [],
+                    "properties": props,
+                }
+
+            if rel and other_props:
+                other_id = str(other_props.get("id", ""))
+                if other_id:
+                    nodes[other_id] = {
+                        "id": other_id,
+                        "labels": other_labels or [],
+                        "properties": other_props,
+                    }
+                    edge_key = (node_id, str(rel), other_id)
+                    edges[edge_key] = {
+                        "source": node_id,
+                        "target": other_id,
+                        "relationship": str(rel),
+                    }
+
+        return {
+            "graph": GRAPH_NAME,
+            "nodes": list(nodes.values()),
+            "edges": list(edges.values()),
+            "node_count": len(nodes),
+            "edge_count": len(edges),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not query investigation graph: {exc}",
+        )
+
+@app.get("/api/entities/{entity_id}/graph")
+def read_entity_graph(
+    entity_id: str,
+    max_hops: int = 3,
+    limit: int = 100,
+):
+    try:
+        result = traverse_graph(
+            start_id=entity_id,
+            max_hops=max_hops,
+            limit=limit,
+        )
+
+        if not result["nodes"]:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No connected graph found for entity: {entity_id}",
+            )
+
+        return {
+            "start_id": result["start_id"],
+            "max_hops": result["max_hops"],
+            "nodes": result["nodes"],
+            "edges": result["edges"],
+            "paths": result["paths"],
+            "node_count": result["node_count"],
+            "edge_count": result["edge_count"],
+            "path_count": result["path_count"],
+            "truncated": result["truncated"],
+        }
+
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not retrieve entity graph: {exc}",
+        )
+
+
+@app.get("/api/accounts")
+def read_accounts(limit: int = 100, offset: int = 0):
+    """Read existing account entities from FalkorDB; never creates data."""
+    if not 1 <= limit <= 500:
+        raise HTTPException(status_code=400, detail="limit must be 1..500")
+    if offset < 0:
+        raise HTTPException(status_code=400, detail="offset must be >= 0")
+
+    try:
+        graph = get_graph()
+        rows = graph.query(
+            """
+            MATCH (a:Entity:Account)
+            RETURN a.id, a.username, a.name, a.display_name,
+                   a.verified, a.status
+            ORDER BY a.id
+            SKIP $offset
+            LIMIT $limit
+            """,
+            {"offset": offset, "limit": limit},
+        ).result_set
+
+        total_rows = graph.query(
+            "MATCH (a:Entity:Account) RETURN count(a)"
+        ).result_set
+
+        return {
+            "accounts": [
+                {
+                    "id": row[0],
+                    "username": row[1],
+                    "name": row[2],
+                    "display_name": row[3],
+                    "verified": row[4],
+                    "status": row[5],
+                }
+                for row in rows
+            ],
+            "limit": limit,
+            "offset": offset,
+            "total": total_rows[0][0] if total_rows else 0,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not list accounts from FalkorDB: {exc}",
+        )
+
+
+@app.get("/api/scenarios")
+def read_scenarios():
+    try:
+        return {
+            "scenarios": list_scenarios()
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not list scenarios: {exc}",
+        )
+
+
+@app.get("/api/scenarios/{scenario_id}")
+def investigate_one_scenario(scenario_id: str):
+    try:
+        report = investigate_scenario(scenario_id)
+
+        if report.get("error"):
+            raise HTTPException(
+                status_code=404,
+                detail=report["error"],
+            )
+
+        return report
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Investigation failed: {exc}",
+        )
+
+
+@app.post("/api/cases/{case_id}/assessment")
+async def generate_case_assessment(case_id: str):
+    """Generate and persist an evidence-grounded assessment for one case."""
+    import json
+    import re
+    from datetime import datetime, timezone
+
+    case = get_case(case_id)
+    if case is None:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Collect fresh evidence scoped to this case and its connected entities.
+    graph = get_graph()
+
+    case_rows = graph.query(
+        """
+        MATCH (c:Entity:Case {id: $case_id})
+        OPTIONAL MATCH (c)-[:INVOLVES_ACCOUNT]->(a:Entity:Account)
+        OPTIONAL MATCH (c)-[:CONCERNS_MESSAGE]->(m:Entity:IncomingMessage)
+        OPTIONAL MATCH (c)-[:OBSERVED_DOMAIN]->(o:Entity:ObservedDomain)
+        RETURN properties(c),
+               collect(DISTINCT properties(a)),
+               collect(DISTINCT properties(m)),
+               collect(DISTINCT properties(o))
+        """,
+        {"case_id": case_id},
+    ).result_set
+
+    if not case_rows:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    case_props, account_props, message_props, domain_props = case_rows[0]
+    account_props = [dict(x) for x in (account_props or []) if x]
+    message_props = [dict(x) for x in (message_props or []) if x]
+    domain_props = [dict(x) for x in (domain_props or []) if x]
+    account_ids = [
+        str(a["id"]) for a in account_props if a.get("id")
+    ]
+    message_ids = [
+        str(m["id"]) for m in message_props if m.get("id")
+    ]
+
+    report_rows = []
+    if account_ids:
+        report_rows.extend(graph.query(
+            """
+            MATCH (r:Entity:Report)-[:REPORTS_ACCOUNT]->(a:Entity:Account)
+            WHERE a.id IN $account_ids
+            OPTIONAL MATCH (r)-[:SUBMITTED_BY]->(p:Entity:Reporter)
+            RETURN DISTINCT r.id, a.id, p.id, r.reason, r.status,
+                            r.is_synthetic
+            ORDER BY r.id
+            """,
+            {"account_ids": account_ids},
+        ).result_set)
+
+    if message_ids:
+        report_rows.extend(graph.query(
+            """
+            MATCH (r:Entity:Report)-[:ABOUT_MESSAGE]->(m)
+            WHERE m.id IN $message_ids
+            OPTIONAL MATCH (r)-[:SUBMITTED_BY]->(p:Entity:Reporter)
+            RETURN DISTINCT r.id, null, p.id, r.reason, r.status,
+                            r.is_synthetic
+            ORDER BY r.id
+            """,
+            {"message_ids": message_ids},
+        ).result_set)
+
+    reports = {}
+    for row in report_rows:
+        report_id, account_id, reporter_id, reason, status, synthetic = row
+        if not report_id:
+            continue
+        reports[str(report_id)] = {
+            "report_id": str(report_id),
+            "account_id": str(account_id) if account_id else None,
+            "reporter_id": str(reporter_id) if reporter_id else None,
+            "reason": str(reason) if reason else "Reason not recorded",
+            "status": str(status) if status else "unknown",
+            "is_synthetic": bool(synthetic),
+        }
+
+    evidence = {
+        "case_id": case_id,
+        "case_status": case_props.get("status"),
+        "message": message_props,
+        "accounts": account_props,
+        "observed_domains": domain_props,
+        "linked_reports": list(reports.values()),
+        "distinct_reporter_count": len({
+            r["reporter_id"] for r in reports.values()
+            if r["reporter_id"]
+        }),
+    }
+
+    # Keep only compact, case-specific live evidence in the model prompt.
+    evidence_text = json.dumps(
+        evidence, ensure_ascii=False, default=str
+    )[:4500]
+
+    question = (
+        "You are VEYRA, a friendly safety assistant helping everyday people "
+        "decide whether a message looks safe. Assess ONLY the supplied case and "
+        "its connected evidence. Never inspect the entire graph or invent facts. "
+        "Choose exactly one risk level: HIGH, MEDIUM, or SAFE. HIGH means there "
+        "are strong warning signs or several relevant reports. MEDIUM means "
+        "something looks unusual, or there is not enough information to be sure. "
+        "SAFE means the available information supports a normal, trustworthy "
+        "message and no important warning signs were found. Never call a message "
+        "SAFE only because no reports exist. Explain the result in everyday "
+        "language, as if speaking to a friend. Avoid technical terms such as "
+        "'corroborating evidence', 'unverified domain', 'graph relationships', "
+        "'high-risk classification', and 'indicators'. Say 'suspicious link', "
+        "'other reports', or 'warning signs' when appropriate. Do not sound "
+        "alarmist or claim a scam is proven when it is not. "
+        "Return ONLY these two fields: RISK LEVEL: HIGH, MEDIUM, or SAFE; "
+        "SUMMARY: one or two short, friendly sentences that explain what the user "
+        "should understand. No evidence lists, technical reasoning, or action lists.\\n\\n"
+        "Live case evidence JSON:\\n" + evidence_text
+    )
+
+    session_id = f"case-{case_id}"
+
+    try:
+        answer = await ask_veyra(question, session_id=session_id)
+        if not answer or not answer.strip():
+            raise RuntimeError("Agent returned an empty assessment")
+
+        match = re.search(
+            r"RISK LEVEL\\s*:\\s*(HIGH|MEDIUM|SAFE)\\b",
+            answer,
+            flags=re.IGNORECASE,
+        )
+        risk_level = match.group(1).upper() if match else "MEDIUM"
+        timestamp = datetime.now(timezone.utc).isoformat()
+
+        graph = get_graph()
+        rows = graph.query(
+            """
+            MATCH (c:Entity:Case {id: $case_id})
+            RETURN c.agent_assessments_json
+            """,
+            {"case_id": case_id},
+        ).result_set
+
+        history = []
+        if rows and rows[0][0]:
+            try:
+                history = json.loads(rows[0][0])
+                if not isinstance(history, list):
+                    history = []
+            except (TypeError, ValueError):
+                history = []
+
+        history.append({
+            "timestamp": timestamp,
+            "risk_level": risk_level,
+            "answer": answer,
+            "session_id": session_id,
+        })
+
+        graph.query(
+            """
+            MATCH (c:Entity:Case {id: $case_id})
+            SET c.agent_reply = $answer,
+                c.agent_risk_level = $risk_level,
+                c.agent_assessment_updated_at = $timestamp,
+                c.agent_session_id = $session_id,
+                c.agent_assessments_json = $history_json
+            """,
+            {
+                "case_id": case_id,
+                "answer": answer,
+                "risk_level": risk_level,
+                "timestamp": timestamp,
+                "session_id": session_id,
+                "history_json": json.dumps(history, ensure_ascii=False),
+            },
+        )
+
+        return {
+            "case_id": case_id,
+            "answer": answer,
+            "risk_level": risk_level,
+            "updated_at": timestamp,
+            "session_id": session_id,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        import logging
+        logger = logging.getLogger("veyra.assessment")
+        logger.exception(
+            "Case assessment failed for case_id=%s",
+            case_id,
+        )
+
+        details = repr(exc)
+        nested = getattr(exc, "exceptions", None)
+        if nested:
+            details += " | Sub-exceptions: " + "; ".join(
+                repr(item) for item in nested
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not generate case assessment: {details}",
+        )
+
+
+class ChatRequest(BaseModel):
+    question: str = Field(min_length=1, max_length=2000)
+    session_id: str = Field(min_length=1, max_length=200)
+
+
+@app.post("/api/chat")
+async def chat(request: ChatRequest):
+    try:
+        answer = await ask_veyra(
+            request.question,
+            session_id=request.session_id,
+        )
+        return {
+            "question": request.question,
+            "answer": answer,
+            "session_id": request.session_id,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Veyra chat failed: {exc}",
+        )
+
+@app.get("/api/chat/history")
+async def chat_history(
+    session_id: str = Query(..., min_length=1, max_length=200)
+):
+    """Load saved chat turns for a single session."""
+    try:
+        from agent.memory_retriever import retrieve_conversations
+
+        turns = await asyncio.to_thread(
+            retrieve_conversations, session_id, 50
+        )
+        messages = []
+
+        for turn in reversed(turns):
+            if turn.get("user_message"):
+                messages.append({
+                    "role": "user",
+                    "text": turn["user_message"],
+                    "created_at": turn.get("created_at"),
+                })
+            if turn.get("assistant_message"):
+                messages.append({
+                    "role": "assistant",
+                    "text": turn["assistant_message"],
+                    "created_at": turn.get("created_at"),
+                })
+
+        return {"session_id": session_id, "messages": messages}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not load chat history: {exc}",
+        )
+
+
+class AnalyzeMessageRequest(BaseModel):
+    message: str = Field(min_length=1, max_length=10000)
+    sender_account_id: str | None = Field(default=None, max_length=200)
+    sender_username: str | None = Field(default=None, max_length=200)
+    sender_display_name: str | None = Field(default=None, max_length=300)
+    scenario_id: str | None = Field(default=None, max_length=100)
+    source: str = Field(default="user_submission", max_length=100)
+
+
+@app.post("/api/messages/analyze", status_code=202)
+def analyze_incoming_message(
+    request: AnalyzeMessageRequest,
+    background_tasks: BackgroundTasks,
+):
+    try:
+        sender_account_id = request.sender_account_id
+
+        # Explicit synthetic-demo mapping; this does not verify real identity.
+        if (
+            not sender_account_id
+            and request.source == "dm_simulator"
+            and request.scenario_id
+        ):
+            graph = get_graph()
+            scenario_rows = graph.query(
+                "MATCH (s:Entity:Scenario {id: $scenario_id}) "
+                "RETURN s.primary_account_id LIMIT 1",
+                {"scenario_id": request.scenario_id},
+            ).result_set
+            if scenario_rows and scenario_rows[0][0]:
+                sender_account_id = scenario_rows[0][0]
+
+        # Resolve the simulator username if no scenario account was found.
+        if not sender_account_id and request.sender_username:
+            graph = get_graph()
+            matches = graph.query(
+                """
+                MATCH (a:Entity:Account)
+                WHERE toLower(trim(coalesce(a.username, ""))) = toLower(trim($username))
+                RETURN a.id
+                LIMIT 1
+                """,
+                {"username": request.sender_username.lstrip("@")},
+            ).result_set
+            if matches:
+                sender_account_id = matches[0][0]
+
+        case = create_case(
+            message=request.message,
+            sender_account_id=sender_account_id,
+            source=request.source,
+        )
+
+        # New cases always start an investigation.
+        # A reused case still marked "investigating" may have been left
+        # behind by a stopped server or failed background task. Allow the
+        # user to resume it by submitting the same message again.
+        case_status = str(case.get("status", "")).lower()
+        should_start = (
+            case.get("created", not case.get("reused", False))
+            or (
+                case.get("reused", False)
+                and case_status in {
+                    "investigating",
+                    "investigation_failed",
+                    "failed",
+                }
+            )
+        )
+
+        if should_start:
+            background_tasks.add_task(
+                investigate_case,
+                case["case_id"],
+            )
+
+        return case
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not create investigation case: {exc}",
+        )
+
+
+
+
+class RemediationRequest(BaseModel):
+    action: str
+    reason: str
+    confirmed: bool = False
+
+
+@app.post("/api/cases/{case_id}/remediation", status_code=201)
+def save_case_remediation(case_id: str, request: RemediationRequest):
+    """Record a user-confirmed review decision in the existing FalkorDB graph."""
+    import uuid
+    from datetime import timezone
+
+    allowed_actions = {"report_for_review", "mark_safe_after_review"}
+    if request.action not in allowed_actions:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported action. Choose report_for_review or mark_safe_after_review.",
+        )
+    if not request.confirmed:
+        raise HTTPException(
+            status_code=400,
+            detail="Explicit confirmation is required.",
+        )
+    if not request.reason.strip():
+        raise HTTPException(status_code=400, detail="A reason is required.")
+
+    graph = get_graph()
+    existing = graph.query(
+        "MATCH (c:Entity:Case {id: $case_id}) RETURN c.id LIMIT 1",
+        {"case_id": case_id},
+    ).result_set
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Case not found.")
+
+    action_id = str(uuid.uuid4())
+    timestamp = datetime.now(timezone.utc).isoformat()
+
+    graph.query(
+        """
+        MATCH (c:Entity:Case {id: $case_id})
+        CREATE (r:Entity:Remediation {
+            id: $action_id,
+            action: $action,
+            reason: $reason,
+            confirmed: true,
+            created_at: $timestamp,
+            source: "veyra_workspace"
+        })
+        CREATE (c)-[:HAS_REMEDIATION]->(r)
+        """,
+        {
+            "case_id": case_id,
+            "action_id": action_id,
+            "action": request.action,
+            "reason": request.reason.strip(),
+            "timestamp": timestamp,
+        },
+    )
+
+    return {
+        "id": action_id,
+        "case_id": case_id,
+        "action": request.action,
+        "reason": request.reason.strip(),
+        "confirmed": True,
+        "created_at": timestamp,
+        "message": (
+            "Review decision saved in VEYRA. "
+            "No external account was blocked."
+        ),
+    }
+
+@app.get("/api/cases")
+def read_cases(limit: int = 200):
+    """List saved cases from FalkorDB."""
+    try:
+        return list_cases(limit=limit)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not list investigation cases: {exc}",
+        )
+
+
+@app.get("/api/cases/{case_id}")
+def read_case(case_id: str):
+    try:
+        case = get_case(case_id)
+
+        if case is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Case not found",
+            )
+
+        return case
+
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Could not retrieve case: {exc}",
+        )
