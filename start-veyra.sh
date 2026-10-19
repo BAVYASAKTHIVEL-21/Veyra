@@ -1,17 +1,41 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+
 cd "$(dirname "$0")"
 
-echo "Building VEYRA..."
-docker compose build
+COMPOSE=(docker compose -f compose.yaml)
 
-echo "Starting FalkorDB..."
-docker compose up -d falkordb
+echo "===== VEYRA STARTUP ====="
 
-echo "Waiting for FalkorDB..."
+echo "Validating Compose configuration..."
+"${COMPOSE[@]}" config --quiet
+
+echo "Checking existing FalkorDB container..."
+if ! docker inspect veyra-falkordb >/dev/null 2>&1; then
+  echo "ERROR: Existing container 'veyra-falkordb' was not found."
+  echo "Start or restore the intended database manually; refusing to create a new one."
+  exit 1
+fi
+
+if ! docker inspect -f '{{.State.Running}}' veyra-falkordb | grep -qx true; then
+  echo "ERROR: Existing FalkorDB container is not running."
+  echo "Refusing to create a replacement database automatically."
+  exit 1
+fi
+
+echo "Checking database connectivity..."
+if ! docker exec veyra-falkordb redis-cli PING | grep -q PONG; then
+  echo "ERROR: FalkorDB did not respond to PING."
+  exit 1
+fi
+
+echo "Starting backend and frontend using compose.yaml..."
+"${COMPOSE[@]}" up -d --build backend frontend
+
+echo "Waiting for backend health..."
 ready=0
-for i in $(seq 1 40); do
-  if docker compose exec -T falkordb redis-cli PING 2>/dev/null | grep -q PONG; then
+for _ in $(seq 1 30); do
+  if curl -fsS --max-time 3 http://localhost:8000/api/health >/dev/null; then
     ready=1
     break
   fi
@@ -19,46 +43,18 @@ for i in $(seq 1 40); do
 done
 
 if [ "$ready" -ne 1 ]; then
-  docker compose logs --tail=80 falkordb
-  echo "ERROR: FalkorDB did not become ready."
+  echo "ERROR: Backend health check failed."
+  "${COMPOSE[@]}" logs --tail=80 backend
   exit 1
 fi
 
-echo "Checking whether VEYRA needs initial seeding..."
-docker compose run --rm --no-deps backend python -c '
-from falkordb import FalkorDB
-db = FalkorDB(host="falkordb", port=6379,
-              socket_connect_timeout=3, socket_timeout=10)
-g = db.select_graph("VEYRA")
-try:
-    result = g.query("MATCH (n) RETURN count(n)")
-    count = int(result.result_set[0][0])
-except Exception:
-    count = 0
-print("Existing VEYRA nodes:", count)
-raise SystemExit(0 if count > 0 else 10)
-' && seeded=1 || rc=$?
-
-if [ "${seeded:-0}" != "1" ]; then
-  if [ "${rc:-0}" -ne 10 ]; then
-    echo "ERROR: Could not check the graph. Stopping to avoid unsafe seeding."
-    exit 1
-  fi
-
-  echo "Seeding original scenarios..."
-  docker compose run --rm --no-deps backend python /app/seed_graph.py
-
-  echo "Seeding demo population..."
-  docker compose run --rm --no-deps backend python /app/seed_demo_population.py
-else
-  echo "Graph already contains data; skipping initial seed."
-fi
-
-echo "Starting backend and frontend..."
-docker compose up -d backend frontend
+echo
+echo "===== VEYRA STATUS ====="
+"${COMPOSE[@]}" ps
 
 echo
-docker compose ps
+echo "Frontend: http://localhost:8080"
+echo "Backend health: http://localhost:8000/api/health"
+echo "Graph API: http://localhost:8080/api/graph"
 echo
-echo "Open port 5173 in the Codespaces Ports tab."
-echo "Backend logs: docker compose logs -f backend"
+echo "No database creation, reset, or seeding was performed."
