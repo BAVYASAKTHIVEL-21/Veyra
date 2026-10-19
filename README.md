@@ -93,14 +93,15 @@ This makes the investigation explainable: users can inspect the connections behi
 A graph query starts from a known entity or indicator, matches its recorded relationships, and returns the connected nodes and edges. Multi-hop traversal extends that process across more than one relationship. The investigation logic controls which paths to follow and which results to return.
 
 ```mermaid
-flowchart TD
-    A[Starting indicator: Account] --> B[Query direct relationships]
-    B --> C[Find linked Message or Post]
-    C --> D[Follow URL relationship]
-    D --> E[Resolve connected Domain node]
-    E --> F[Query other accounts linked to the domain]
-    F --> G[Check related Reports and Evidence]
-    G --> H[Return relevant paths and entities]
+```mermaid
+flowchart LR
+    A["Starting Indicator: Account"] --> B["Query Direct Relationships"]
+    B --> C["Find Linked Message or Post"]
+    C --> D["Follow URL Relationship"]
+    D --> E["Resolve Connected Domain Node"]
+    E --> F["Query Other Accounts Linked to the Domain"]
+    F --> G["Check Related Reports and Evidence"]
+    G --> H["Return Relevant Paths and Entities"]
 ```
 
 For example, the conceptual path may be `Account → Message → URL → Domain → Other Account → Report`. Each arrow is a relationship stored in the graph; the path only appears if the relevant nodes and edges exist in the data. The traversal code and graph queries perform this exploration, while the UI displays the returned results.
