@@ -235,6 +235,8 @@ Veyra automatically starts the services and seeds the FalkorDB graph.
 
 💻 **Connect** [LinkedIn](www.linkedin.com/in/bavya21)
 
+📝 **Blog:** [Discover VEYRA](https://medium.com/@bavyasakthivel21/veyra-670b382469ef)
+
 ## Project status
 
 VEYRA is a demonstration project built around synthetic investigation scenarios. Its goal is to show how graph relationships, multi-hop queries, AI-assisted exploration, case history, and persistent context can work together in a cyber-investigation workflow.
