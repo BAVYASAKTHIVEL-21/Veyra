@@ -59,6 +59,51 @@ declare global {
 
 
 
+
+function VeyraFormattedText({ text }: { text: string }) {
+  // Render common Markdown emphasis as React elements; never interpret HTML.
+  const renderInline = (line: string, lineIndex: number) => {
+    const parts = line.split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|`[^`]+`)/g);
+
+    return parts.map((part, index) => {
+      if (
+        (part.startsWith("**") && part.endsWith("**")) ||
+        (part.startsWith("__") && part.endsWith("__"))
+      ) {
+        return <strong key={`${lineIndex}-${index}`}>{part.slice(2, -2)}</strong>;
+      }
+
+      if (
+        (part.startsWith("*") && part.endsWith("*")) ||
+        (part.startsWith("_") && part.endsWith("_"))
+      ) {
+        return <em key={`${lineIndex}-${index}`}>{part.slice(1, -1)}</em>;
+      }
+
+      if (part.startsWith("`") && part.endsWith("`")) {
+        return (
+          <code
+            key={`${lineIndex}-${index}`}
+            className="rounded bg-white/10 px-1 py-0.5 text-violet-200"
+          >
+            {part.slice(1, -1)}
+          </code>
+        );
+      }
+
+      return part;
+    });
+  };
+
+  return (
+    <div className="break-words [overflow-wrap:anywhere] space-y-2 text-sm leading-6 text-slate-200">
+      {text.split(/\n+/).map((line, index) => (
+        <p key={index}>{renderInline(line, index)}</p>
+      ))}
+    </div>
+  );
+}
+
 export default function InvestigationWorkspace({
   initialMessage = null,
   initialContext = null,
@@ -153,8 +198,16 @@ export default function InvestigationWorkspace({
     const currentHost = window.location.hostname;
     const portMatch = currentHost.match(/^(.*)-\d+\.app\.github\.dev$/);
 
-    if (!portMatch) {
-      alert("Could not determine the Codespaces port URL.");
+    let falkorBaseUrl: string;
+    if (portMatch) {
+      falkorBaseUrl = `https://${portMatch[1]}-3000.app.github.dev`;
+    } else if (
+      currentHost === "localhost" ||
+      currentHost === "127.0.0.1"
+    ) {
+      falkorBaseUrl = `${window.location.protocol}//${currentHost}:3000`;
+    } else {
+      alert("Could not determine the FalkorDB URL. Configure the forwarded port 3000.");
       return;
     }
 
@@ -181,7 +234,7 @@ export default function InvestigationWorkspace({
       `WHERE m.id IN ${idsLiteral} ` +
       `RETURN n, r, m LIMIT 500`;
 
-    const url = `https://${portMatch[1]}-3000.app.github.dev/graph?graph=VEYRA&query=${encodeURIComponent(cypher)}`;
+    const url = `${falkorBaseUrl}/graph?graph=VEYRA&query=${encodeURIComponent(cypher)}`;
 
     // Navigate directly on the user's click; no blank tab or API wait.
     window.open(url, "_blank");
@@ -1579,9 +1632,9 @@ export default function InvestigationWorkspace({
                     <p className="mb-2 text-[10px] font-mono font-semibold uppercase tracking-[0.18em] text-violet-300">
                       Summary
                     </p>
-                    <p className="break-words [overflow-wrap:anywhere] text-sm leading-6 text-slate-200">
-                      {summary || "No summary was returned for this assessment."}
-                    </p>
+                    <VeyraFormattedText
+                      text={summary || "No summary was returned for this assessment."}
+                    />
                   </div>
                 );
               })()}

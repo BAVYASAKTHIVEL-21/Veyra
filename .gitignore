@@ -36,3 +36,6 @@ veyra-before-*.json
 .env.*
 !.env.example
 .envwq
+
+# Local repair snapshots
+*.before_*
