@@ -93,7 +93,6 @@ This makes the investigation explainable: users can inspect the connections behi
 A graph query starts from a known entity or indicator, matches its recorded relationships, and returns the connected nodes and edges. Multi-hop traversal extends that process across more than one relationship. The investigation logic controls which paths to follow and which results to return.
 
 ```mermaid
-```mermaid
 flowchart LR
     A["Starting Indicator: Account"] --> B["Query Direct Relationships"]
     B --> C["Find Linked Message or Post"]
