@@ -214,7 +214,7 @@ The responsibilities stay distinct:
 
 This combination makes VEYRA more than a static graph viewer. It brings together connected data, investigation workflows, and conversational exploration.
 
-## 🚀 Run Veyra Locally
+## Run Veyra Locally
 
 ```bash
 git clone https://github.com/BAVYASAKTHIVEL-21/Veyra.git
