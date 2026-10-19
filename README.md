@@ -214,11 +214,26 @@ The responsibilities stay distinct:
 
 This combination makes VEYRA more than a static graph viewer. It brings together connected data, investigation workflows, and conversational exploration.
 
+## 🚀 Run Veyra Locally
+
+```bash
+git clone https://github.com/BAVYASAKTHIVEL-21/Veyra.git
+cd Veyra
+chmod +x start-veyra.sh
+./start-veyra.sh
+```
+
+Once startup completes, open **http://localhost:8080** in your browser.
+
+Veyra automatically starts the services and seeds the FalkorDB graph.
+
+**✨ Play around with Veyra!** Explore different safe and suspicious scenarios, inspect connected accounts and graph relationships, and see how Veyra investigates potential threats. Have fun experimenting!
+
 ## See VEYRA in action
 
-🎥 **Watch the demo:** [VEYRA on YouTube](https://youtu.be/yANb3tzrCDY?si=P0RzDpl_sKf2jyiy)
+🎥 **Demo:** [VEYRA on YouTube](https://youtu.be/yANb3tzrCDY?si=P0RzDpl_sKf2jyiy)
 
-💻 **Connect with me** [LinkedIn](www.linkedin.com/in/bavya21)
+💻 **Connect** [LinkedIn](www.linkedin.com/in/bavya21)
 
 ## Project status
 
