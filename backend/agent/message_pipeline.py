@@ -66,8 +66,8 @@ def analyze_message(message):
     }
 
 
-def create_case(message, sender_account_id=None, source="user_submission"):
-    """Create a case once, or reuse the matching persisted investigation."""
+def create_case(message, sender_account_id=None, source="user_submission", new_case=False):
+    """Reuse matching cases by default; optionally create a fresh case."""
     import hashlib
 
     graph = get_graph()
@@ -81,6 +81,7 @@ def create_case(message, sender_account_id=None, source="user_submission"):
         MATCH (c:Entity:Case)-[:CONCERNS_MESSAGE]->
               (m:Entity:IncomingMessage)
         WHERE toLower(trim(m.text)) = toLower(trim($message))
+          AND $new_case = false
         OPTIONAL MATCH (c)-[:INVOLVES_ACCOUNT]->(a:Entity:Account)
         WITH c, m, a
         WHERE
@@ -93,6 +94,7 @@ def create_case(message, sender_account_id=None, source="user_submission"):
         {
             "message": message.strip(),
             "sender_account_id": sender_account_id,
+            "new_case": new_case,
         },
     ).result_set
 
@@ -111,8 +113,8 @@ def create_case(message, sender_account_id=None, source="user_submission"):
     # the same case and message rather than generating fresh UUIDs.
     identity = normalized + "\n" + (sender_account_id or "")
     dedupe_key = hashlib.sha256(identity.encode("utf-8")).hexdigest()
-    case_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "veyra-case:" + dedupe_key))
-    message_id = str(uuid.uuid5(uuid.NAMESPACE_URL, "veyra-message:" + dedupe_key))
+    case_id = str(uuid.uuid4()) if new_case else str(uuid.uuid5(uuid.NAMESPACE_URL, "veyra-case:" + dedupe_key))
+    message_id = str(uuid.uuid4()) if new_case else str(uuid.uuid5(uuid.NAMESPACE_URL, "veyra-message:" + dedupe_key))
     creation_token = str(uuid.uuid4())
 
     case_rows = graph.query(
@@ -700,6 +702,7 @@ def list_cases(limit=200):
             c.updated_at AS updated_at,
             c.investigation_completed_at AS investigation_completed_at,
             c.error AS error
+        ORDER BY c.created_at DESC
         LIMIT $limit
         """,
         {"limit": safe_limit},

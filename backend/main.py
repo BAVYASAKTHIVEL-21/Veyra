@@ -638,6 +638,7 @@ async def chat_history(
 
 
 class AnalyzeMessageRequest(BaseModel):
+    new_case: bool = False
     message: str = Field(min_length=1, max_length=10000)
     sender_account_id: str | None = Field(default=None, max_length=200)
     sender_username: str | None = Field(default=None, max_length=200)
@@ -688,6 +689,7 @@ def analyze_incoming_message(
             message=request.message,
             sender_account_id=sender_account_id,
             source=request.source,
+            new_case=request.new_case,
         )
 
         # New cases always start an investigation.

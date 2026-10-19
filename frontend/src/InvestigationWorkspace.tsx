@@ -297,7 +297,8 @@ export default function InvestigationWorkspace({
           sender_display_name: initialMetadata?.senderDisplayName ?? null,
           scenario_id: initialMetadata?.scenarioId ?? null,
           // UI verification badges are not trusted identity evidence.
-          source: initialMetadata ? 'dm_simulator' : 'investigation_workspace'
+          source: initialMetadata ? 'dm_simulator' : 'investigation_workspace',
+          new_case: true
         })
       });
 
