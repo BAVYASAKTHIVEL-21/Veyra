@@ -672,36 +672,50 @@ def get_case(case_id):
 
 
 def list_cases(limit=200):
-    """Return persisted investigation cases, newest updates first."""
+    """Return persisted investigation cases with lightweight archive metadata."""
     import json
 
     graph = get_graph()
+    safe_limit = max(1, min(int(limit), 500))
+
+    # Do not retrieve large graph snapshots for every row in the archive.
     rows = graph.query(
         """
         MATCH (c:Entity:Case)
-        RETURN properties(c)
-        ORDER BY c.updated_at DESC, c.created_at DESC
+        RETURN
+            c.id AS id,
+            c.investigation_id AS investigation_id,
+            c.sender AS sender,
+            c.message AS message,
+            c.status AS status,
+            c.classification AS classification,
+            c.risk_level AS risk_level,
+            c.agent_risk_level AS agent_risk_level,
+            c.risk AS risk,
+            c.confidence AS confidence,
+            c.assessment AS assessment,
+            c.agent_reply AS agent_reply,
+            c.agent_assessments_json AS agent_assessments_json,
+            c.created_at AS created_at,
+            c.updated_at AS updated_at,
+            c.investigation_completed_at AS investigation_completed_at,
+            c.error AS error
         LIMIT $limit
         """,
-        {"limit": max(1, min(int(limit), 500))},
+        {"limit": safe_limit},
     ).result_set
 
     cases = []
     for row in rows:
-        props = dict(row[0] or {})
-
-        for stored_key, public_key, default in (
-            ("findings_json", "findings", []),
-            ("progress_json", "progress_events", []),
-            ("graph_snapshot_json", "graph_snapshot", None),
-            ("history_json", "history", []),
-        ):
-            raw = props.pop(stored_key, None)
-            try:
-                props[public_key] = json.loads(raw) if raw else default
-            except (TypeError, ValueError):
-                props[public_key] = default
-
-        cases.append(props)
+        case = dict(zip(
+            [
+                "id", "investigation_id", "sender", "message", "status",
+                "classification", "risk_level", "agent_risk_level", "risk",
+                "confidence", "assessment", "agent_reply", "agent_assessments_json", "created_at", "updated_at",
+                "investigation_completed_at", "error"
+            ],
+            row
+        ))
+        cases.append(case)
 
     return cases

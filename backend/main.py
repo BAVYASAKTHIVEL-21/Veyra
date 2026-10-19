@@ -46,51 +46,85 @@ def read_graph():
     try:
         graph = get_graph()
 
-        node_count_result = graph.query(
-            "MATCH (n) RETURN count(n) AS total_nodes"
-        )
-        relationship_count_result = graph.query(
-            "MATCH ()-[r]->() RETURN count(r) AS total_relationships"
-        )
+        total_node_count = graph.query(
+            "MATCH (n) RETURN count(n)"
+        ).result_set[0][0]
 
-        total_node_count = node_count_result.result_set[0][0]
-        total_relationship_count = relationship_count_result.result_set[0][0]
+        total_relationship_count = graph.query(
+            "MATCH ()-[r]->() RETURN count(r)"
+        ).result_set[0][0]
 
-        nodes_result = graph.query(
-            """
-            MATCH (n)
-            RETURN id(n) AS node_id, labels(n) AS labels,
-                   properties(n) AS props
-            """
-        )
+        # Retrieve nodes in small batches to avoid timeouts on large properties.
+        batch_size = 50
+        nodes = []
+        offset = 0
+        bulky_fields = {"progress_json", "graph_snapshot_json"}
 
-        # Only endpoint IDs and relationship metadata are needed here.
-        # Full node properties are returned once in the nodes array.
+        while offset < total_node_count:
+            result = graph.query(
+                """
+                MATCH (n)
+                WITH n
+                ORDER BY id(n)
+                SKIP $offset
+                LIMIT $batch_size
+                RETURN id(n) AS node_id,
+                       labels(n) AS labels,
+                       n{
+                           .id, .scenario_id, .entity_type,
+                           .username, .display_name, .name, .bio,
+                           .profile_image, .followers, .following,
+                           .post_count, .verified, .account_created_at,
+                           .account_status, .profile_url, .account_type,
+                           .platform_id, .platform_account_id,
+                           .sender_id, .recipient_id, .domain_id,
+                           .account_id, .text, .created_at, .updated_at,
+                           .content_type, .caption, .content_hash,
+                           .published_at, .source, .scenario_type,
+                           .expected_outcome, .description,
+                           .primary_account_id, .official_domain,
+                           .logo_image, .identifier_type, .masked_value,
+                           .evidence_type, .source_type, .source_ref,
+                           .confidence, .observed_at, .interpretation,
+                           .report_type, .reported_at, .reason, .status,
+                           .domain, .hostname, .url, .platform_type,
+                           .first_seen, .last_seen, .first_seen_at,
+                           .last_seen_at, .initial_assessment, .assessment,
+                           .agent_reply, .agent_risk_level,
+                           .investigation_completed_at, .summary
+                       } AS props
+                """,
+                {"offset": offset, "batch_size": batch_size},
+            )
+
+            rows = result.result_set
+            if not rows:
+                break
+
+            for row in rows:
+                props = row[2] or {}
+                nodes.append({
+                    "node_id": row[0],
+                    "labels": row[1],
+                    "properties": {
+                        key: value
+                        for key, value in props.items()
+                        if key not in bulky_fields
+                    },
+                })
+
+            offset += len(rows)
+
         edges_result = graph.query(
             """
             MATCH (a)-[r]->(b)
-            RETURN id(a) AS from_id, labels(a) AS from_labels,
+            RETURN id(a) AS from_id,
+                   labels(a) AS from_labels,
                    type(r) AS relationship,
-                   id(b) AS to_id, labels(b) AS to_labels
+                   id(b) AS to_id,
+                   labels(b) AS to_labels
             """
         )
-
-        # Keep investigation history in FalkorDB and the case-detail API.
-        # Do not duplicate large serialized histories in the graph payload.
-        bulky_fields = {"progress_json", "graph_snapshot_json"}
-
-        nodes = [
-            {
-                "node_id": row[0],
-                "labels": row[1],
-                "properties": {
-                    key: value
-                    for key, value in (row[2] or {}).items()
-                    if key not in bulky_fields
-                },
-            }
-            for row in nodes_result.result_set
-        ]
 
         edges = [
             {

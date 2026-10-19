@@ -655,14 +655,8 @@ body.veyra-investigation-open .diagonal-sweep-2 {
                     <select id="case-status-filter" onchange="filterCasesTable()" class="bg-obsidian border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:border-[#FFCC00] focus:outline-none">
                         <option value="ALL">All Statuses</option>
                         <option value="COMPLETED">Completed</option>
-                        <option value="IN PROGRESS">In Progress</option>
-                        <option value="NEEDS REVIEW">Needs Review</option>
-                    </select>
-                    <select id="case-risk-filter" onchange="filterCasesTable()" class="bg-obsidian border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:border-[#FFCC00] focus:outline-none">
-                        <option value="ALL">All Risk Levels</option>
-                        <option value="HIGH">High Risk</option>
-                        <option value="MEDIUM">Medium Risk</option>
-                        <option value="LOW">Low Risk</option>
+                        <option value="IN_PROGRESS">In Progress</option>
+                        <option value="FAILED">Failed</option>
                     </select>
                 </div>
             </div>
@@ -675,7 +669,7 @@ body.veyra-investigation-open .diagonal-sweep-2 {
                             <tr class="border-b border-white/10 text-[10px] mono text-slate-400">
                                 <th class="py-3 px-3">Case ID</th>
                                 <th class="py-3 px-3">Investigation / Primary Entity</th>
-                                <th class="py-3 px-3">Risk Level</th>
+                                
                                 <th class="py-3 px-3">Status</th>
                                 <th class="py-3 px-3">Created</th>
                                 <th class="py-3 px-3 text-right">Action</th>
@@ -2168,7 +2162,10 @@ window.executeVeyraInvestigationOnSelected = function () {
 <script>
 
         function getApiUrl(endpoint) {
-            if (window.location.protocol.startsWith('blob:') || window.location.protocol === 'file:') {
+            if (
+                window.location.protocol.startsWith('blob:') ||
+                window.location.protocol === 'file:'
+            ) {
                 return 'http://localhost:8000' + endpoint;
             }
             return endpoint;
@@ -2177,48 +2174,165 @@ window.executeVeyraInvestigationOnSelected = function () {
         let allCasesCache = [];
         let activeCase = null;
 
-        async function loadCasesList() {
-            const tbody = document.getElementById('cases-table-body');
-            const badge = document.getElementById('backend-status-badge');
+        const VEYRA_CASE_CACHE_KEY = "veyra.caseArchive.v1";
+        const VEYRA_CHAT_CACHE_PREFIX = "veyra.caseChat.v1:";
 
-            if (!tbody) {
-                console.error("VEYRA: cases-table-body element not found");
-                return;
+        function readVeyraCache(key) {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : null;
+            } catch (err) {
+                console.warn("[VEYRA CACHE] Could not read cache:", err);
+                return null;
             }
+        }
 
-            tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500">Querying FalkorDB cases archive...</td></tr>`;
+        function writeVeyraCache(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (err) {
+                console.warn("[VEYRA CACHE] Could not save cache:", err);
+            }
+        }
+
+        let veyraArchiveRefreshInFlight = false;
+
+        async function loadCasesList() {
+            if (veyraArchiveRefreshInFlight) return;
+            veyraArchiveRefreshInFlight = true;
 
             try {
-                const res = await fetch(getApiUrl('/api/cases'), {
-                    cache: 'no-store'
-                });
+                if (!window.__veyraCaseAutoRefreshStarted) {
+                    window.__veyraCaseAutoRefreshStarted = true;
 
-                if (!res.ok) {
-                    throw new Error(`Cases API returned HTTP ${res.status}`);
+                    const refreshArchiveIfVisible = () => {
+                        if (
+                            document.visibilityState === "visible" &&
+                            window.location.hash.startsWith("#cases")
+                        ) {
+                            void loadCasesList();
+                        }
+                    };
+
+                    // Temporarily disable automatic polling while the backend
+                    // is being diagnosed. Manual Refresh Archive remains available.
+                    window.__veyraCaseAutoRefreshTimer = null;
                 }
 
-                const data = await res.json();
-                allCasesCache = Array.isArray(data)
-                    ? data
-                    : (Array.isArray(data.cases) ? data.cases : []);
+                const tbody = document.getElementById("cases-table-body");
+                const badge = document.getElementById("backend-status-badge");
+                if (!tbody) return;
 
-                if (badge) {
-                    badge.textContent = "FALKORDB: ONLINE";
-                    badge.className = "text-[8px] mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 font-bold";
+                const cached = readVeyraCache(VEYRA_CASE_CACHE_KEY);
+                if (Array.isArray(cached) && cached.length) {
+                    allCasesCache = cached;
+                    renderCasesTable(allCasesCache);
+                } else if (!allCasesCache.length) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="6" class="py-8 text-center text-slate-500">Loading saved cases…</td></tr>';
                 }
 
-                renderCasesTable(allCasesCache);
-            } catch (e) {
-                console.warn("VEYRA cases archive unavailable:", e);
+                try {
+                    const res = await fetch(getApiUrl("/api/cases?limit=200"), {
+                        cache: "no-store"
+                    });
+                    if (!res.ok) {
+                        throw new Error(`Cases API returned HTTP ${res.status}`);
+                    }
 
-                if (badge) {
-                    badge.textContent = "FALKORDB: DEGRADED";
-                    badge.className = "text-[8px] mono text-red-400 bg-red-500/10 px-2.5 py-1 rounded border border-red-500/30 font-bold";
+                    const data = await res.json();
+                    const fresh = Array.isArray(data)
+                        ? data
+                        : (Array.isArray(data.cases) ? data.cases : []);
+
+                    // Don't overwrite a useful archive cache with a transient empty response.
+                    if (fresh.length || !allCasesCache.length) {
+                        allCasesCache = fresh;
+                        writeVeyraCache(VEYRA_CASE_CACHE_KEY, fresh);
+                    }
+
+                    renderCasesTable(allCasesCache);
+
+                    if (badge) {
+                        badge.textContent = "FALKORDB: ONLINE";
+                        badge.className =
+                            "text-[8px] mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 font-bold";
+                    }
+                } catch (err) {
+                    console.warn("[VEYRA] Archive refresh failed:", err);
+
+                    if (badge) {
+                        badge.textContent = "FALKORDB: DEGRADED";
+                        badge.className =
+                            "text-[8px] mono text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded border border-amber-500/30 font-bold";
+                    }
+
+                    if (allCasesCache.length) {
+                        renderCasesTable(allCasesCache);
+                    } else {
+                        tbody.innerHTML =
+                            '<tr><td colspan="6" class="py-8 text-center text-slate-400">Could not load saved cases. Please retry.</td></tr>';
+                    }
                 }
-
-                allCasesCache = [];
-                tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-400">Could not load cases. Check the backend connection and retry.</td></tr>`;
+            } finally {
+                veyraArchiveRefreshInFlight = false;
             }
+        }
+
+        function formatCaseDate(value) {
+            if (!value) return 'Date unavailable';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return String(value);
+            return date.toLocaleString(undefined, {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function getCaseRisk(c) {
+            // Prefer the explicit risk level in the saved AI reply.
+            const reply = String(c.agent_reply || '');
+            const match = reply.match(/RISK\s*LEVEL\s*:\s*(HIGH|MEDIUM|LOW|SAFE|UNKNOWN)\b/i);
+            const value = match ? match[1] :
+                (c.classification || c.risk_level || c.agent_risk_level || c.risk || 'UNKNOWN');
+            return String(value).replaceAll('-', '_').toUpperCase();
+
+        }
+
+
+        function getArchiveRisk(c) {
+            const valid = new Set(["HIGH", "MEDIUM", "LOW", "SAFE", "UNKNOWN"]);
+            const parseRisk = value => {
+                if (!value) return null;
+                const match = String(value).match(/RISK\s*LEVEL\s*:\s*(HIGH|MEDIUM|LOW|SAFE|UNKNOWN)\b/i);
+                if (match) return match[1].toUpperCase();
+                const direct = String(value).trim().replaceAll("-", "_").toUpperCase();
+                return valid.has(direct) ? direct : null;
+            };
+
+            // Prefer an explicit risk in the saved assistant response.
+            const replyRisk = parseRisk(c.agent_reply);
+            if (replyRisk) return replyRisk;
+
+            // If the latest reply has no recognized risk, inspect saved assessment history.
+            try {
+                const history = typeof c.agent_assessments_json === "string"
+                    ? JSON.parse(c.agent_assessments_json)
+                    : c.agent_assessments_json;
+                if (Array.isArray(history)) {
+                    for (let i = history.length - 1; i >= 0; i--) {
+                        const risk = parseRisk(history[i]?.risk_level)
+                            || parseRisk(history[i]?.answer);
+                        if (risk) return risk;
+                    }
+                }
+            } catch (_) {}
+
+            return parseRisk(c.agent_risk_level)
+                || parseRisk(c.classification)
+                || parseRisk(c.risk_level)
+                || parseRisk(c.risk)
+                || "UNKNOWN";
         }
 
         function renderCasesTable(list) {
@@ -2230,10 +2344,13 @@ window.executeVeyraInvestigationOnSelected = function () {
             tbody.innerHTML = '';
             list.forEach(c => {
                 const caseId = c.id || c.investigation_id;
-                const risk = String(
-                    c.classification || c.risk_level || c.agent_risk_level || c.risk || 'UNKNOWN'
-                ).replaceAll('-', '_').toUpperCase();
-                const status = String(c.status || 'UNKNOWN').replaceAll('-', '_').toUpperCase();
+                const risk = getArchiveRisk(c);
+                const storedStatus = String(c.status || 'UNKNOWN').replaceAll('-', '_').toUpperCase();
+                const completed = Boolean(c.investigation_completed_at) && !c.error;
+                const failed = storedStatus === 'FAILED' ||
+                    storedStatus === 'INVESTIGATION_FAILED' || Boolean(c.error);
+                // NEEDS_REVIEW is an internal workflow state, not an archive badge.
+                const status = failed ? 'FAILED' : completed ? 'COMPLETED' : 'IN_PROGRESS';
                 const riskClass = risk === 'HIGH'
                     ? 'bg-red-500/20 text-red-400'
                     : risk === 'MEDIUM'
@@ -2243,20 +2360,19 @@ window.executeVeyraInvestigationOnSelected = function () {
                             : 'bg-slate-500/20 text-slate-300';
                 const statusClass = status === 'COMPLETED'
                     ? 'bg-emerald-500/20 text-emerald-400'
-                    : status === 'NEEDS_REVIEW'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : status === 'INVESTIGATION_FAILED' || status === 'FAILED'
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-slate-500/20 text-slate-300';
+                    : status === 'FAILED'
+                        ? 'bg-red-500/20 text-red-400'
+                        : 'bg-slate-500/20 text-slate-300';
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-white/5 cursor-pointer transition-colors";
                 tr.onclick = () => openCaseDetails(caseId);
                 tr.innerHTML = `
                     <td class="py-3.5 px-3 mono text-[#FFCC00] font-bold">${caseId}</td>
                     <td class="py-3.5 px-3 truncate max-w-xs font-semibold">${escapeHtml(c.message || c.sender || 'Investigation Case')}</td>
-                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${riskClass}">${risk}</span></td>
-                    <td class="py-3.5 px-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}">${status}</span></td>
-                    <td class="py-3.5 px-3 mono text-[10px] text-slate-400">${c.created_at || c.created || 'Date unavailable'}</td>
+                    <td class="py-3.5 px-3">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold ${statusClass}">${status}</span>
+                    </td>
+                    <td class="py-3.5 px-3 mono text-[10px] text-slate-400">${escapeHtml(formatCaseDate(c.created_at || c.created))}</td>
                     <td class="py-3.5 px-3 text-right text-[#FFCC00] font-bold">View Case →</td>
                 `;
                 tbody.appendChild(tr);
@@ -2270,9 +2386,12 @@ window.executeVeyraInvestigationOnSelected = function () {
 
             const filtered = allCasesCache.filter(c => {
                 const matchQ = ( (c.id || '') + ' ' + (c.sender || '') + ' ' + (c.message || '') ).toLowerCase().includes(q);
-                const matchStatus = statusFilter === 'ALL' || (c.status || 'UNKNOWN').toUpperCase() === statusFilter;
-                const matchRisk = riskFilter === 'ALL' || String(c.classification || c.risk_level || c.agent_risk_level || c.risk || 'UNKNOWN').replaceAll('-', '_').toUpperCase() === riskFilter;
-                return matchQ && matchStatus && matchRisk;
+                const stored = String(c.status || 'UNKNOWN').replaceAll('-', '_').toUpperCase();
+                const failed = stored === 'FAILED' || stored === 'INVESTIGATION_FAILED' || Boolean(c.error);
+                const displayStatus = failed ? 'FAILED' :
+                    (c.investigation_completed_at ? 'COMPLETED' : 'IN_PROGRESS');
+                const matchStatus = statusFilter === 'ALL' || displayStatus === statusFilter;
+return matchQ && matchStatus;
             });
             renderCasesTable(filtered);
         }
@@ -2655,21 +2774,42 @@ window.executeVeyraInvestigationOnSelected = function () {
             const chatMsgs = document.getElementById("case-agent-messages");
             if (!chatMsgs) return;
 
-            chatMsgs.innerHTML = '<div class="flex items-center gap-3 py-6 text-xs text-slate-400"><span class="h-2 w-2 animate-pulse rounded-full bg-[#FFCC00]"></span>Loading this case conversation…</div>';
+            const sessionId = `case-${caseId}`;
+            const cacheKey = VEYRA_CHAT_CACHE_PREFIX + sessionId;
+            const cachedMessages = readVeyraCache(cacheKey);
+
+            // Show prior messages immediately when reopening a case.
+            if (Array.isArray(cachedMessages) && cachedMessages.length) {
+                renderCaseAgentMessages(caseId, cachedMessages);
+            } else {
+                chatMsgs.innerHTML = '<div class="flex items-center gap-3 py-6 text-xs text-slate-400"><span class="h-2 w-2 animate-pulse rounded-full bg-[#FFCC00]"></span>Restoring saved conversation…</div>';
+            }
 
             try {
-                const sessionId = `case-${caseId}`;
                 const url = getApiUrl(`/api/chat/history?session_id=${encodeURIComponent(sessionId)}`);
                 const res = await fetch(url, { cache: "no-store" });
-
                 if (!res.ok) throw new Error(`History request failed: ${res.status}`);
 
                 const data = await res.json();
-                renderCaseAgentMessages(caseId, data.messages || []);
+                const messages = Array.isArray(data.messages) ? data.messages : [];
+
+                if (messages.length) {
+                    writeVeyraCache(cacheKey, messages);
+                    renderCaseAgentMessages(caseId, messages);
+                } else if (!(Array.isArray(cachedMessages) && cachedMessages.length)) {
+                    // Only show the welcome screen when neither source has prior messages.
+                    renderCaseAgentMessages(caseId, []);
+                }
             } catch (err) {
-                console.error("[VEYRA CASE HISTORY]", err);
-                chatMsgs.innerHTML = "";
-                appendCaseAgentBubble("assistant", "I couldn't load the saved conversation. Please check the chat service and try again.", { error: true });
+                console.warn("[VEYRA CASE HISTORY] Using cached conversation if available:", err);
+                if (!(Array.isArray(cachedMessages) && cachedMessages.length)) {
+                    chatMsgs.innerHTML = "";
+                    appendCaseAgentBubble(
+                        "assistant",
+                        "Saved conversation is temporarily unavailable. Retry when the connection returns.",
+                        { error: true }
+                    );
+                }
             }
         }
 
