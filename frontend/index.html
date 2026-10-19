@@ -391,7 +391,7 @@ body.veyra-investigation-open .diagonal-sweep-2 {
             <div class="pt-2">
                 <button
                     type="button"
-                    onclick="showInvestigation(); return false;"
+                    onclick="document.querySelector('a[data-veyra-view=&quot;dms&quot;]')?.click(); return false;"
                     class="px-8 py-3.5 rounded-xl bg-[#FFCC00] text-black font-extrabold text-sm hover:bg-[#e6b800] transition-all inline-flex items-center gap-3 cursor-pointer">
                     <span>Start Investigation</span>
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2214,9 +2214,14 @@ window.executeVeyraInvestigationOnSelected = function () {
                         }
                     };
 
-                    // Temporarily disable automatic polling while the backend
-                    // is being diagnosed. Manual Refresh Archive remains available.
-                    window.__veyraCaseAutoRefreshTimer = null;
+                    // Refresh the visible archive every 5 seconds.
+                    if (window.__veyraCaseAutoRefreshTimer) {
+                        clearInterval(window.__veyraCaseAutoRefreshTimer);
+                    }
+                    window.__veyraCaseAutoRefreshTimer = window.setInterval(
+                        refreshArchiveIfVisible,
+                        5000
+                    );
                 }
 
                 const tbody = document.getElementById("cases-table-body");
