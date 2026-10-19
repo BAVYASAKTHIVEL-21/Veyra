@@ -630,14 +630,26 @@ export default function InvestigationWorkspace({
       const allEdges = new Map<string, any>();
       const normalizeNode = (node: any) => {
         const props = node.properties || {};
-        const id = String(node.id ?? props.id ?? '');
+        const id = String(node.node_id ?? node.id ?? props.id ?? '');
         if (id) allNodes.set(id, { ...node, id, properties: props });
       };
       const normalizeEdge = (edge: any) => {
-        const from = String(edge.from ?? edge.source ?? '');
-        const to = String(edge.to ?? edge.target ?? '');
-        const type = String(edge.type ?? edge.label ?? 'CONNECTED_TO');
-        if (from && to) allEdges.set(`${from}|${type}|${to}`, { ...edge, from, to, type });
+        const from = String(
+          edge.from_id ?? edge.from?.id ?? edge.from ??
+          edge.source?.id ?? edge.source ?? ''
+        );
+        const to = String(
+          edge.to_id ?? edge.to?.id ?? edge.to ??
+          edge.target?.id ?? edge.target ?? ''
+        );
+        const type = String(
+          edge.relationship ?? edge.type ?? edge.label ?? 'CONNECTED_TO'
+        );
+        if (from && to) {
+          allEdges.set(`${from}|${type}|${to}`, {
+            ...edge, from, to, type
+          });
+        }
       };
 
       // Snapshot records came from the backend's persisted FalkorDB traversal.
@@ -762,7 +774,7 @@ export default function InvestigationWorkspace({
           || node.type || 'Entity';
 
         return {
-          id: String(node.id ?? props.id),
+          id: String(node.node_id ?? node.id ?? props.id),
           type,
           name: String(
             props.name || props.username || props.domain ||
